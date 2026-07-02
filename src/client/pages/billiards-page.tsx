@@ -16,7 +16,7 @@ import {
   type BallState,
 } from '@shared/billiards/physics';
 
-import { ballSpec, BALL_SPECS, CUE_BALL_ID } from '../billiards/config';
+import { ballSpec, BALL_SPECS, CUE_BALL_ID, toStrikeInput } from '../billiards/config';
 import { BilliardsControls } from '../billiards/controls';
 import { BilliardsScene } from '../billiards/scene';
 import { useBilliardsSim, type SimEvent } from '../billiards/use-billiards';
@@ -84,12 +84,7 @@ export function BilliardsPage() {
     const balls = cloneBalls(sim.snapshot);
     const cue = balls.find((ball) => ball.id === CUE_BALL_ID);
     if (!cue) return null;
-    strike(cue, {
-      speed: sim.shot.speed,
-      directionRad: (sim.shot.directionDeg * Math.PI) / 180,
-      topspin: sim.shot.topspin,
-      sidespin: sim.shot.sidespin,
-    });
+    strike(cue, toStrikeInput(sim.shot));
     return predictPaths(balls, CAROM_TABLE, sim.physics);
   }, [showPrediction, sim.phase, sim.snapshot, sim.shot, sim.physics]);
 

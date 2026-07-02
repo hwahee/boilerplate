@@ -15,7 +15,8 @@
  *  - Sliding regime: cloth friction −μs·m·g acts opposite the contact-point
  *    slip u = v + ω×(−R·ẑ); slip magnitude decays at 3.5·μs·g until the ball
  *    rolls without slipping. This is what turns topspin/backspin into
- *    follow/draw.
+ *    follow/draw — and what turns spin around the travel axis (rollspin)
+ *    into a sideways slip, i.e. a laterally curving path while sliding.
  *  - Rolling regime: rolling resistance μr·g decelerates v while the rolling
  *    constraint (ωx = −vy/R, ωy = vx/R) is enforced each step.
  *  - Vertical spin (english, ωz) decays independently at 2.5·μsp·g/R.
@@ -110,6 +111,12 @@ export interface StrikeInput {
   /** Travel direction, radians, 0 = +x, counter-clockwise. */
   directionRad: number;
   /**
+   * Initial velocity component perpendicular to travel (m/s): > 0 moves
+   * toward the left of travel (ẑ×d̂). Lets a strike start with sideways
+   * movement independent of the aim direction.
+   */
+  lateralSpeed?: number;
+  /**
    * Spin around the horizontal axis perpendicular to travel (rad/s):
    * > 0 topspin (follow), < 0 backspin (draw).
    */
@@ -119,17 +126,33 @@ export interface StrikeInput {
    * left of travel (counter-clockwise seen from above).
    */
   sidespin: number;
+  /**
+   * Spin around the travel axis itself (rad/s): > 0 curves the path to the
+   * left of travel (the spin acts like the ball rolling leftward). The
+   * sideways contact slip it creates is eaten by cloth friction, so the
+   * curve happens during the sliding phase and the path straightens once
+   * pure rolling is reached.
+   */
+  rollspin?: number;
 }
 
 /** Sets a ball's state from the strike variables (replaces v and ω). */
 export function strike(ball: BallState, input: StrikeInput): void {
   const dx = Math.cos(input.directionRad);
   const dy = Math.sin(input.directionRad);
-  ball.velocity = { x: input.speed * dx, y: input.speed * dy };
+  const lateral = input.lateralSpeed ?? 0;
+  const roll = input.rollspin ?? 0;
+  // Left of travel is l̂ = ẑ×d̂ = (−dy, dx).
+  ball.velocity = {
+    x: input.speed * dx - lateral * dy,
+    y: input.speed * dy + lateral * dx,
+  };
   // Topspin axis is ẑ×d̂ so that spin > 0 matches natural forward roll.
+  // Rollspin axis is −d̂ so that spin > 0 matches natural leftward roll
+  // (a ball rolling toward l̂ has ω = −|v|/R·d̂), i.e. it curves left.
   ball.spin = {
-    x: -dy * input.topspin,
-    y: dx * input.topspin,
+    x: -dy * input.topspin - dx * roll,
+    y: dx * input.topspin - dy * roll,
     z: input.sidespin,
   };
 }

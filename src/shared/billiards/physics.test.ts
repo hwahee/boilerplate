@@ -45,7 +45,14 @@ describe('determinism', () => {
   test('identical inputs produce bit-identical states', () => {
     const make = () => {
       const balls = [ball('cue', -0.7, -0.1), ball('red', 0.5, 0.1)];
-      strike(balls[0]!, { speed: 3, directionRad: 0.2, topspin: 40, sidespin: -25 });
+      strike(balls[0]!, {
+        speed: 3,
+        directionRad: 0.2,
+        lateralSpeed: 0.4,
+        topspin: 40,
+        sidespin: -25,
+        rollspin: 30,
+      });
       return balls;
     };
     const a = make();
@@ -101,6 +108,46 @@ describe('friction and spin', () => {
     };
     expect(shoot(60)).toBeGreaterThan(shoot(0));
     expect(shoot(0)).toBeGreaterThan(shoot(-60));
+  });
+
+  test('lateralSpeed starts the ball with a sideways velocity component', () => {
+    const balls = [ball('cue', 0, 0)];
+    // Aim along +y with lateral speed 1 → left of travel is −x.
+    strike(balls[0]!, {
+      speed: 2,
+      directionRad: Math.PI / 2,
+      lateralSpeed: 1,
+      topspin: 0,
+      sidespin: 0,
+    });
+    expect(balls[0]!.velocity.x).toBeCloseTo(-1, 6);
+    expect(balls[0]!.velocity.y).toBeCloseTo(2, 6);
+  });
+
+  test('rollspin curves the sliding path sideways', () => {
+    const shoot = (rollspin: number) => {
+      const balls = [ball('cue', -1.2, 0)];
+      strike(balls[0]!, { speed: 1.5, directionRad: 0, topspin: 0, sidespin: 0, rollspin });
+      // Sample mid-flight, well before any cushion, while still sliding.
+      runSteps(balls, Math.round(0.6 / SIM_DT));
+      return balls[0]!.position.y;
+    };
+    expect(shoot(150)).toBeGreaterThan(0.02); // > 0 curves left of travel
+    expect(shoot(-150)).toBeLessThan(-0.02); // < 0 curves right
+    expect(shoot(0)).toBeCloseTo(0, 6); // no rollspin → straight line
+  });
+
+  test('the rollspin curve stops once pure rolling is reached', () => {
+    const balls = [ball('cue', -1.2, 0)];
+    strike(balls[0]!, { speed: 1, directionRad: 0, topspin: 0, sidespin: 0, rollspin: 80 });
+    // Slip (≈ R·|ω| ⊕ v) decays at 3.5·μs·g ≈ 6.9 m/s² → rolling well
+    // before 0.6 s; from then on the heading must stay fixed.
+    runSteps(balls, Math.round(0.6 / SIM_DT));
+    const headingAt = () => Math.atan2(balls[0]!.velocity.y, balls[0]!.velocity.x);
+    const rolling = headingAt();
+    expect(rolling).toBeGreaterThan(0); // it did curve left while sliding
+    runSteps(balls, Math.round(0.3 / SIM_DT));
+    expect(headingAt()).toBeCloseTo(rolling, 6);
   });
 
   test('sliding transitions to rolling (contact slip vanishes)', () => {

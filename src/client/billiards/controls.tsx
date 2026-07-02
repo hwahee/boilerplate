@@ -131,6 +131,16 @@ export function BilliardsControls({
           onChange={(directionDeg) => setShot({ ...shot, directionDeg })}
         />
         <SliderRow
+          name="lateral-speed"
+          labelKey="billiards.lateralSpeed"
+          value={shot.lateralSpeed}
+          min={-2}
+          max={2}
+          step={0.05}
+          unit="m/s"
+          onChange={(lateralSpeed) => setShot({ ...shot, lateralSpeed })}
+        />
+        <SliderRow
           name="topspin"
           labelKey="billiards.topspin"
           value={shot.topspin}
@@ -149,6 +159,16 @@ export function BilliardsControls({
           step={5}
           unit="rad/s"
           onChange={(sidespin) => setShot({ ...shot, sidespin })}
+        />
+        <SliderRow
+          name="rollspin"
+          labelKey="billiards.rollspin"
+          value={shot.rollspin}
+          min={-250}
+          max={250}
+          step={5}
+          unit="rad/s"
+          onChange={(rollspin) => setShot({ ...shot, rollspin })}
         />
         <div className="billiards-actions">
           <Button

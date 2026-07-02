@@ -4,7 +4,7 @@
  * @shared/billiards/physics — this file only fixes the concrete scenario.
  */
 import type { MessageKey } from '@shared/i18n';
-import type { BallState } from '@shared/billiards/physics';
+import type { BallState, StrikeInput } from '@shared/billiards/physics';
 
 export type BallId = 'white' | 'yellow' | 'redA' | 'redB';
 
@@ -53,15 +53,33 @@ export interface ShotSettings {
   speed: number;
   /** degrees; 0 = +x, counter-clockwise seen from above. */
   directionDeg: number;
+  /** m/s perpendicular to aim; > 0 starts moving left of travel. */
+  lateralSpeed: number;
   /** rad/s; > 0 topspin (follow), < 0 backspin (draw). */
   topspin: number;
   /** rad/s; > 0 bends left of travel. */
   sidespin: number;
+  /** rad/s around the travel axis; > 0 curves left while sliding. */
+  rollspin: number;
 }
 
 export const DEFAULT_SHOT: ShotSettings = {
   speed: 2.5,
   directionDeg: 13,
+  lateralSpeed: 0,
   topspin: 0,
   sidespin: 0,
+  rollspin: 0,
 };
+
+/** Maps the UI shot settings onto the engine's strike variables. */
+export function toStrikeInput(shot: ShotSettings): StrikeInput {
+  return {
+    speed: shot.speed,
+    directionRad: (shot.directionDeg * Math.PI) / 180,
+    lateralSpeed: shot.lateralSpeed,
+    topspin: shot.topspin,
+    sidespin: shot.sidespin,
+    rollspin: shot.rollspin,
+  };
+}

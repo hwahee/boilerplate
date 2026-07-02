@@ -22,7 +22,13 @@ import {
   type PhysicsParams,
 } from '@shared/billiards/physics';
 
-import { createInitialBalls, CUE_BALL_ID, DEFAULT_SHOT, type ShotSettings } from './config';
+import {
+  createInitialBalls,
+  CUE_BALL_ID,
+  DEFAULT_SHOT,
+  toStrikeInput,
+  type ShotSettings,
+} from './config';
 
 type SimPhase = 'idle' | 'running' | 'paused';
 
@@ -161,12 +167,7 @@ export function useBilliardsSim(): BilliardsSim {
     if (phaseRef.current !== 'idle') return;
     const cue = ballsRef.current.find((b) => b.id === CUE_BALL_ID);
     if (!cue) return;
-    strike(cue, {
-      speed: shot.speed,
-      directionRad: (shot.directionDeg * Math.PI) / 180,
-      topspin: shot.topspin,
-      sidespin: shot.sidespin,
-    });
+    strike(cue, toStrikeInput(shot));
     setPhase('running');
     updateSnapshot();
   }, [shot, setPhase, updateSnapshot]);

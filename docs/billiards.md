@@ -28,12 +28,17 @@ Coordinates: table plane x/y, z up, SI units. Equal-mass uniform spheres,
 `I = 2/5·m·R²`. Fixed step `SIM_DT = 1/600 s` — determinism requires that the
 step never varies, so the render loop feeds an accumulator, never `dt`.
 
-- **Strike** (`strike()`): sets `v = speed·(cosθ, sinθ)` and
-  `ω = topspin·(ẑ×d̂) + sidespin·ẑ`. Topspin > 0 matches natural forward
-  roll; sidespin > 0 bends the rebound to the left of travel.
+- **Strike** (`strike()`): sets `v = speed·d̂ + lateralSpeed·(ẑ×d̂)` and
+  `ω = topspin·(ẑ×d̂) − rollspin·d̂ + sidespin·ẑ`. Topspin > 0 matches
+  natural forward roll; sidespin > 0 bends the rebound to the left of
+  travel; lateralSpeed > 0 starts the ball moving left of the aim;
+  rollspin > 0 (spin around the travel axis) curves the path to the left.
 - **Sliding regime**: cloth friction `−μs·m·g·û` acts opposite the
   contact-point slip `u = v + ω×(−R·ẑ)`; `|u|` decays at `3.5·μs·g`.
-  This converts topspin/backspin into follow/draw.
+  This converts topspin/backspin into follow/draw, and converts rollspin
+  into a sideways slip → a laterally curving path. The curve lasts only
+  while the ball slides; once pure rolling is reached the path is straight
+  again (massé-like behaviour).
 - **Rolling regime**: once slip vanishes, rolling resistance `μr·g`
   decelerates `v` under the no-slip constraint (`ωx = −vy/R, ωy = vx/R`).
 - **Vertical spin** (english) decays independently at `2.5·μsp·g/R`.
@@ -48,8 +53,9 @@ step never varies, so the render loop feeds an accumulator, never `dt`.
 
 ## UI variables
 
-- **Shot**: initial speed (m/s), direction (°), topspin/backspin (rad/s),
-  sidespin (rad/s).
+- **Shot**: initial speed (m/s), direction (°), lateral speed (m/s,
+  perpendicular to the aim), topspin/backspin (rad/s), sidespin (rad/s),
+  roll spin around the travel axis (rad/s, curves the sliding path).
 - **Physics coefficients**: μs, μr, μsp, cushion restitution & friction,
   ball restitution & friction — all adjustable live; the prediction reruns
   on every change.
