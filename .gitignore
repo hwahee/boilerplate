@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Secrets — never commit real environment values. Use .env.example as the template.
+.env
+.env.*
+!.env.example
+
+# Test / coverage
+coverage/
+
+# Editor & OS
+.DS_Store
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json

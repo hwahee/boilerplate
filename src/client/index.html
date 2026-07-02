@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-design="a">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bun Fullstack Boilerplate</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+    <script>
+      // Apply persisted theme/design/locale before first paint (no flash).
+      // Keys must match theme-context.tsx / locale-context.tsx.
+      try {
+        var root = document.documentElement;
+        var theme = localStorage.getItem('app.theme');
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        root.dataset.theme = theme;
+        root.dataset.design = localStorage.getItem('app.design') === 'b' ? 'b' : 'a';
+        var locale = localStorage.getItem('app.locale');
+        if (locale === 'en' || locale === 'ko') root.lang = locale;
+      } catch (_) {
+        /* first paint fallback: defaults from the html attributes */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

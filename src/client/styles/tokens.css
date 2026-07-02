@@ -1,0 +1,148 @@
+/* ============================================================================
+ * DESIGN TOKENS
+ *
+ * Three layers:
+ *   1. Primitives (:root)        — raw values, never used by components.
+ *   2. Design-variant dimensions — [data-design='a'|'b'] sizing/typography.
+ *   3. Semantic colors           — [data-design][data-theme] combinations.
+ *
+ * Components consume ONLY semantic tokens (--color-*, --font-size-*,
+ * --control-*), which is what makes theme (light/dark) and design variant
+ * (A = aesthetic-first, B = visibility-first) switchable with a single
+ * attribute change on <html>.
+ * ==========================================================================*/
+
+:root {
+  /* -- primitives: spacing / radius / motion / fonts -- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  --duration-fast: 150ms;
+
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto,
+    'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* ── Design A: aesthetic-first — refined type scale, soft edges ───────────── */
+[data-design='a'] {
+  --font-size-sm: 0.8125rem;
+  --font-size-body: 0.9375rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2rem;
+  --font-weight-heading: 650;
+  --line-height-body: 1.6;
+
+  --control-height: 2.25rem;
+  --control-padding-x: var(--space-3);
+  --radius-control: var(--radius-md);
+  --radius-surface: var(--radius-lg);
+  --border-width: 1px;
+  --focus-ring-width: 2px;
+  --surface-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+}
+
+/* ── Design B: visibility-first — bigger type, thick borders, high contrast ─ */
+[data-design='b'] {
+  --font-size-sm: 1rem;
+  --font-size-body: 1.125rem;
+  --font-size-lg: 1.3125rem;
+  --font-size-xl: 1.75rem;
+  --font-size-2xl: 2.25rem;
+  --font-weight-heading: 750;
+  --line-height-body: 1.7;
+
+  --control-height: 3rem;
+  --control-padding-x: var(--space-4);
+  --radius-control: var(--radius-sm);
+  --radius-surface: var(--radius-sm);
+  --border-width: 2px;
+  --focus-ring-width: 4px;
+  --surface-shadow: none;
+}
+
+/* ── Semantic colors: design A ────────────────────────────────────────────── */
+[data-design='a'][data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #f6f6fa;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-text: #23283a;
+  --color-text-muted: #69708a;
+  --color-border: #e3e5ee;
+  --color-primary: #5b5bd6;
+  --color-primary-hover: #4949c4;
+  --color-primary-contrast: #ffffff;
+  --color-success: #1a9e56;
+  --color-warning: #c07a12;
+  --color-danger: #d64550;
+  --color-danger-contrast: #ffffff;
+  --color-focus: #5b5bd6;
+}
+
+[data-design='a'][data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #14161e;
+  --color-surface: #1d2029;
+  --color-surface-raised: #262a36;
+  --color-text: #e7e9f2;
+  --color-text-muted: #9ba2b8;
+  --color-border: #313545;
+  --color-primary: #8f8ff2;
+  --color-primary-hover: #a7a7f7;
+  --color-primary-contrast: #14161e;
+  --color-success: #4ecb84;
+  --color-warning: #e0a33e;
+  --color-danger: #f0707a;
+  --color-danger-contrast: #14161e;
+  --color-focus: #8f8ff2;
+}
+
+/* ── Semantic colors: design B (WCAG-AAA-leaning contrast) ────────────────── */
+[data-design='b'][data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f2f2f2;
+  --color-text: #000000;
+  --color-text-muted: #3d3d3d;
+  --color-border: #000000;
+  --color-primary: #0038a8;
+  --color-primary-hover: #002a7f;
+  --color-primary-contrast: #ffffff;
+  --color-success: #005e2b;
+  --color-warning: #7a4d00;
+  --color-danger: #a80000;
+  --color-danger-contrast: #ffffff;
+  --color-focus: #0038a8;
+}
+
+[data-design='b'][data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #000000;
+  --color-surface: #0d0d0d;
+  --color-surface-raised: #1a1a1a;
+  --color-text: #ffffff;
+  --color-text-muted: #d6d6d6;
+  --color-border: #ffffff;
+  --color-primary: #82b1ff;
+  --color-primary-hover: #a9c9ff;
+  --color-primary-contrast: #000000;
+  --color-success: #57d787;
+  --color-warning: #ffc457;
+  --color-danger: #ff8080;
+  --color-danger-contrast: #000000;
+  --color-focus: #82b1ff;
+}
