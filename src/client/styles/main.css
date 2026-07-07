@@ -411,6 +411,412 @@ a {
   margin-top: var(--space-4);
 }
 
+/* ── Playrooms: lobby ─────────────────────────────────────────────────────── */
+.rooms-setup {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) 2fr;
+  gap: var(--space-5);
+  align-items: start;
+  margin-block: var(--space-4);
+}
+
+@media (max-width: 48rem) {
+  .rooms-setup {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rooms-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.rooms-create .field {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.rooms-emoji-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.rooms-emoji {
+  width: var(--control-height);
+  height: var(--control-height);
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.rooms-emoji--active {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.rooms-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-4);
+}
+
+.room-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.room-card__emoji {
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+}
+
+.room-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.room-card__name {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-card__meta {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+.room-nickname-gate {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  max-width: 28rem;
+  margin-block: var(--space-5);
+}
+
+.room-nickname-gate .field {
+  flex: 1;
+}
+
+/* ── Playrooms: inside a room ─────────────────────────────────────────────── */
+.room-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.room-header__title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.room-participants {
+  list-style: none;
+  margin: 0 auto 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.room-participants__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+}
+
+.room-participants__dot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: var(--radius-full);
+}
+
+.room-quiz {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-surface);
+}
+
+.room-scores {
+  list-style: none;
+  margin: 0 0 0 auto;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.room-scores__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-full);
+}
+
+.room-main {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(16rem, 1.4fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (max-width: 56rem) {
+  .room-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.room-canvas-wrap {
+  position: relative;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--surface-shadow);
+}
+
+.room-canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1280 / 800;
+  background: #fff;
+  touch-action: none;
+}
+
+.room-canvas[data-can-draw] {
+  cursor: crosshair;
+}
+
+.room-canvas-lock {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-2);
+  transform: translateX(-50%);
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-full);
+  pointer-events: none;
+}
+
+.room-reactions-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.room-reaction-float {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: var(--font-size-2xl);
+  animation: reaction-rise 3s ease-out forwards;
+}
+
+.room-reaction-float small {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  border-radius: var(--radius-full);
+  padding: 0 var(--space-1);
+}
+
+@keyframes reaction-rise {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-16rem);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-reaction-float {
+    animation: reaction-fade 3s ease-out forwards;
+  }
+
+  @keyframes reaction-fade {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+}
+
+.room-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.room-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.room-swatch {
+  width: calc(var(--control-height) * 0.75);
+  height: calc(var(--control-height) * 0.75);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+}
+
+.room-swatch--active {
+  outline: var(--focus-ring-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.room-brush {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--control-height) * 0.75);
+  height: calc(var(--control-height) * 0.75);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.room-brush--active {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.room-brush__dot {
+  background: currentcolor;
+  border-radius: var(--radius-full);
+}
+
+.room-chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--surface-shadow);
+}
+
+.room-chat__title {
+  margin: 0;
+  font-size: var(--font-size-body);
+}
+
+.room-chat__log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  height: 20rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.room-chat__line {
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.room-chat__line--system {
+  font-style: italic;
+}
+
+.room-chat__fun {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.room-reaction-btn {
+  font-size: var(--font-size-body);
+  line-height: 1;
+  padding: var(--space-1);
+  background: transparent;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.room-reaction-btn:hover {
+  background: var(--color-surface-raised);
+}
+
+.room-dice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.room-dice-btn:hover {
+  background: var(--color-surface-raised);
+}
+
+.room-chat__form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.room-chat__form .field {
+  flex: 1;
+}
+
 /* ── Design-system page ───────────────────────────────────────────────────── */
 .ds-section {
   margin-block: var(--space-6);

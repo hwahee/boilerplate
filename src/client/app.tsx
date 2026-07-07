@@ -11,6 +11,8 @@ import { SUPPORTED_LOCALES, type Locale } from '@shared/i18n';
 import { LocaleProvider, useI18n } from './i18n/locale-context';
 import { DesignSystemPage } from './pages/design-system-page';
 import { NotFoundPage } from './pages/not-found-page';
+import { RoomPage } from './pages/room-page';
+import { RoomsPage } from './pages/rooms-page';
 import { TodosPage } from './pages/todos-page';
 import { TESTID } from './testing/testids';
 import { ThemeProvider, useTheme } from './theme/theme-context';
@@ -43,6 +45,9 @@ function Header() {
         {/* NavLink sets aria-current="page" on the active route automatically. */}
         <NavLink to="/" end data-testid={TESTID.app.navTodos}>
           {t('nav.todos')}
+        </NavLink>
+        <NavLink to="/rooms" data-testid={TESTID.app.navRooms}>
+          {t('nav.rooms')}
         </NavLink>
         <NavLink to="/design-system" data-testid={TESTID.app.navDesignSystem}>
           {t('nav.designSystem')}
@@ -91,6 +96,8 @@ function Shell() {
       <main id="main" className="app-main">
         <Routes>
           <Route path="/" element={<TodosPage />} />
+          <Route path="/rooms" element={<RoomsPage />} />
+          <Route path="/rooms/:roomId" element={<RoomPage />} />
           <Route path="/design-system" element={<DesignSystemPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

@@ -7,8 +7,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:tes
 
 import { VERSION_HEADER } from '@shared/api/version';
 import type { Todo } from '@shared/domain/todo';
+import type { ServerMessage } from '@shared/rooms/protocol';
+import type { RoomSummary } from '@shared/rooms/room';
 
-import { buildApp } from '../app';
+import { buildApp, type SocketData } from '../app';
 import { loadServerConfig } from '../config';
 import { createContainer, type Container } from '../container';
 import { silentLogger } from '../lib/log';
@@ -18,7 +20,7 @@ const ALLOWED_ORIGIN = 'https://allowed.example.com';
 
 let container: Container;
 let state: AppState;
-let server: Bun.Server<undefined>;
+let server: Bun.Server<SocketData>;
 let baseUrl: string;
 
 beforeAll(() => {
@@ -257,5 +259,104 @@ describe('CORS', () => {
 describe('fallback', () => {
   test('unknown paths return 404', async () => {
     expect((await api('GET', '/definitely-not-a-route')).status).toBe(404);
+  });
+});
+
+describe('playrooms', () => {
+  /** WebSocket client wrapper that queues messages for awaiting in order. */
+  async function joinRoom(roomId: string, nickname: string) {
+    const queue: ServerMessage[] = [];
+    const waiters: ((message: ServerMessage) => void)[] = [];
+    const socket = new WebSocket(
+      `${baseUrl.replace('http', 'ws')}/ws/rooms/${roomId}?nickname=${encodeURIComponent(nickname)}`,
+    );
+    socket.onmessage = (event) => {
+      const message = JSON.parse(String(event.data)) as ServerMessage;
+      const waiter = waiters.shift();
+      if (waiter) waiter(message);
+      else queue.push(message);
+    };
+    await new Promise((resolve, reject) => {
+      socket.onopen = resolve;
+      socket.onerror = reject;
+    });
+    return {
+      socket,
+      send(message: unknown) {
+        socket.send(JSON.stringify(message));
+      },
+      next(): Promise<ServerMessage> {
+        const queued = queue.shift();
+        if (queued) return Promise.resolve(queued);
+        return new Promise((resolve) => waiters.push(resolve));
+      },
+    };
+  }
+
+  test('create + list rooms', async () => {
+    const created = await api<RoomSummary>('POST', '/api/rooms', {
+      body: { name: '통합 테스트 방', emoji: '🚀' },
+    });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({
+      name: '통합 테스트 방',
+      emoji: '🚀',
+      participantCount: 0,
+    });
+
+    const list = await api<{ items: RoomSummary[] }>('GET', '/api/rooms');
+    expect(list.status).toBe(200);
+    expect(list.body.items.some((room) => room.id === created.body.id)).toBe(true);
+  });
+
+  test('rejects invalid room bodies with the error envelope', async () => {
+    const { status, body } = await api<{ error: { code: string } }>('POST', '/api/rooms', {
+      body: { name: '', emoji: '🦄' },
+    });
+    expect(status).toBe(400);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  test('rejects sockets for unknown rooms or invalid nicknames', async () => {
+    expect((await api('GET', '/ws/rooms/nope?nickname=x')).status).toBe(404);
+    const room = await api<RoomSummary>('POST', '/api/rooms', {
+      body: { name: 'ws 검증', emoji: '🎲' },
+    });
+    expect((await api('GET', `/ws/rooms/${room.body.id}`)).status).toBe(400);
+    // Valid parameters but no upgrade headers → 426.
+    expect((await api('GET', `/ws/rooms/${room.body.id}?nickname=x`)).status).toBe(426);
+  });
+
+  test('two clients meet in a room and chat over the socket', async () => {
+    const room = await api<RoomSummary>('POST', '/api/rooms', {
+      body: { name: '수다방', emoji: '💬' },
+    });
+
+    const alice = await joinRoom(room.body.id, '철수');
+    const aliceWelcome = await alice.next();
+    if (aliceWelcome.type !== 'welcome') throw new Error('expected welcome');
+    expect(aliceWelcome.participants.map((p) => p.nickname)).toEqual(['철수']);
+
+    const bob = await joinRoom(room.body.id, '영희');
+    const bobWelcome = await bob.next();
+    if (bobWelcome.type !== 'welcome') throw new Error('expected welcome');
+    expect(bobWelcome.participants.map((p) => p.nickname)).toEqual(['철수', '영희']);
+
+    expect((await alice.next()).type).toBe('participants');
+    const joined = await alice.next();
+    if (joined.type !== 'chat') throw new Error('expected chat');
+    expect(joined.entry).toMatchObject({ kind: 'system', code: 'joined' });
+
+    bob.send({ type: 'chat', text: '안녕하세요!' });
+    const received = await alice.next();
+    if (received.type !== 'chat') throw new Error('expected chat');
+    expect(received.entry).toMatchObject({ kind: 'user', nickname: '영희', text: '안녕하세요!' });
+
+    // Live participant counts surface in the lobby list.
+    const list = await api<{ items: RoomSummary[] }>('GET', '/api/rooms');
+    expect(list.body.items.find((item) => item.id === room.body.id)?.participantCount).toBe(2);
+
+    alice.socket.close();
+    bob.socket.close();
   });
 });

@@ -26,12 +26,15 @@ import {
   createPostgresTodoRepository,
 } from './repositories/postgres';
 import type { AuditLogRepository, TodoRepository, UnitOfWork } from './repositories/types';
+import { LiveRoomService } from './services/live-room-service';
 import { TodoService } from './services/todo-service';
 
 export interface Container {
   readonly config: ServerConfig;
   readonly log: Logger;
   todoService(): TodoService;
+  /** Live playrooms (in-process state — see the service's doc comment). */
+  liveRoomService(): LiveRoomService;
   pubsub(): PubSub;
   /** Health probe: is the persistence layer reachable? */
   dbPing(): Promise<boolean>;
@@ -100,10 +103,13 @@ export function createContainer(
       }),
   );
 
+  const liveRoomService = lazy(() => new LiveRoomService({ log }));
+
   return {
     config,
     log,
     todoService,
+    liveRoomService,
     pubsub,
     async dbPing() {
       if (config.dbDriver === 'memory') return true;

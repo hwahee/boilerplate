@@ -10,12 +10,18 @@ import type { Todo, TodoStatus } from '@shared/domain/todo';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { todosApi, type TodoListQueryInput } from './endpoints';
+import type { CreateRoomInput } from '@shared/rooms/room';
+
+import { roomsApi, todosApi, type TodoListQueryInput } from './endpoints';
 
 const todoKeys = {
   all: ['todos'] as const,
   lists: () => [...todoKeys.all, 'list'] as const,
   list: (query: TodoListQueryInput) => [...todoKeys.lists(), query] as const,
+};
+
+const roomKeys = {
+  list: ['rooms', 'list'] as const,
 };
 
 /** Paginated list; keeps the previous page rendered while the next one loads. */
@@ -75,6 +81,29 @@ export function useDeleteTodo() {
   return useMutation({
     mutationFn: (id: string) => todosApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: todoKeys.lists() }),
+  });
+}
+
+/**
+ * Lobby room list. Participant counts change as people come and go, so the
+ * list refreshes on a short interval instead of a WebSocket — the lobby is
+ * low-stakes and polling keeps it dependency-free.
+ */
+export function useRoomList() {
+  return useQuery({
+    queryKey: roomKeys.list,
+    queryFn: () => roomsApi.list(),
+    refetchInterval: 5_000,
+    staleTime: 3_000,
+  });
+}
+
+/** Creates a room, then refreshes the lobby list. */
+export function useCreateRoom() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateRoomInput) => roomsApi.create(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: roomKeys.list }),
   });
 }
 

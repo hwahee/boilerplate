@@ -17,6 +17,7 @@
  */
 import type { Page } from '@shared/api/pagination';
 import type { CreateTodoInput, Todo, TodoListQuery, UpdateTodoInput } from '@shared/domain/todo';
+import type { CreateRoomInput, RoomSummary } from '@shared/rooms/room';
 
 import { apiFetch } from './http';
 
@@ -79,5 +80,31 @@ export const todosApi = {
    */
   remove(id: string): Promise<void> {
     return apiFetch(`/api/todos/${id}`, { method: 'DELETE' });
+  },
+};
+
+export const roomsApi = {
+  /**
+   * `GET /api/rooms`
+   *
+   * Every live playroom, newest first, with live participant counts.
+   * Unpaginated on purpose (rooms are in-process live sessions — see
+   * src/server/routes/rooms.ts). Everything INSIDE a room travels over the
+   * room WebSocket (`/ws/rooms/:roomId`), not this API.
+   */
+  list(): Promise<{ items: RoomSummary[] }> {
+    return apiFetch('/api/rooms');
+  },
+
+  /**
+   * `POST /api/rooms`
+   *
+   * Creates a playroom.
+   * - Body:   `{ name, emoji }` — name 1–40 chars, emoji from ROOM_EMOJIS.
+   * - Errors: 400 `VALIDATION_ERROR` with issue details.
+   * - Returns 201 with the created `RoomSummary`.
+   */
+  create(input: CreateRoomInput): Promise<RoomSummary> {
+    return apiFetch('/api/rooms', { method: 'POST', body: input });
   },
 };
