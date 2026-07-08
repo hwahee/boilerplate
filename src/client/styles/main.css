@@ -512,12 +512,13 @@ a {
   );
 }
 
-/* Press in: invert the bevel and nudge the label down-right. */
+/* Press in: invert the bevel and nudge the label down-right. Use transform
+   (not padding) so the button's box is unchanged — padding would grow the
+   auto-width element and reflow its neighbors. */
 [data-design='office'] .btn:not(:disabled):active {
   border-color: var(--office-bevel-dark) var(--office-bevel-light) var(--office-bevel-light)
     var(--office-bevel-dark);
-  padding-top: 1px;
-  padding-left: 1px;
+  transform: translate(1px, 1px);
 }
 
 /* ── Sunken inputs / selects (both use .field__input) ──────────────────────*/
