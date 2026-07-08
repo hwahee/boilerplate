@@ -16,7 +16,8 @@
         }
         root.dataset.theme = theme;
         var design = localStorage.getItem('app.design');
-        root.dataset.design = design === 'b' || design === 'office' ? design : 'a';
+        root.dataset.design =
+          design === 'b' || design === 'office' || design === 'kids' ? design : 'a';
         var locale = localStorage.getItem('app.locale');
         if (locale === 'en' || locale === 'ko') root.lang = locale;
       } catch (_) {

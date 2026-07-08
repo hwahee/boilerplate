@@ -25,9 +25,19 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
+  --radius-xl: 28px;
   --radius-full: 999px;
 
   --duration-fast: 150ms;
+
+  /* Motion knobs consumed by interaction rules. Neutral by default (designs A/B
+     stay calm); the kids skin overrides these to exaggerate every interaction. */
+  --ease-interaction: ease;
+  --hover-scale: 1;
+  --hover-lift: 0px;
+  --hover-rotate: 0deg;
+  --press-scale: 1;
+  --focus-scale: 1;
 
   --font-sans:
     'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto,
@@ -96,6 +106,40 @@
 
   /* Restrained: state changes are instant — no easing, no motion. */
   --duration-fast: 0s;
+}
+
+/* ── Design "kids": playground/toy vibe — chunky, rounded, bouncy ──────────── */
+[data-design='kids'] {
+  /* Rounded, friendly display font; falls back through fun system faces. */
+  --font-sans:
+    'Baloo 2', 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', 'Fredoka', 'Apple SD Gothic Neo',
+    'Malgun Gothic', system-ui, sans-serif;
+
+  --font-size-sm: 0.9375rem;
+  --font-size-body: 1.0625rem;
+  --font-size-lg: 1.375rem;
+  --font-size-xl: 1.875rem;
+  --font-size-2xl: 2.5rem;
+  --font-weight-heading: 800;
+  --line-height-body: 1.6;
+
+  --control-height: 3rem;
+  --control-padding-x: var(--space-4);
+  --radius-control: var(--radius-full); /* pill-shaped, toy-like */
+  --radius-surface: var(--radius-xl); /* big rounded corners */
+  --border-width: 3px; /* thick cartoon outline */
+  --focus-ring-width: 4px;
+  /* Hard offset drop-shadow → sticker / Roblox-stud look. */
+  --surface-shadow: 0 6px 0 rgb(0 0 0 / 12%), 0 14px 26px rgb(0 0 0 / 10%);
+
+  /* Exaggerated motion: overshoot spring + big scale/lift/tilt. */
+  --duration-fast: 220ms;
+  --ease-interaction: cubic-bezier(0.34, 1.8, 0.5, 1); /* springy overshoot */
+  --hover-scale: 1.08;
+  --hover-lift: -4px;
+  --hover-rotate: -2.5deg;
+  --press-scale: 0.9;
+  --focus-scale: 1.04;
 }
 
 /* ── Semantic colors: design A ────────────────────────────────────────────── */
@@ -219,4 +263,41 @@
   --office-bevel-dark: #141414;
   --office-btn-top: #4a4a4a;
   --office-btn-bottom: #333333;
+}
+
+/* ── Semantic colors: design "kids" — bright, saturated, candy palette ─────── */
+[data-design='kids'][data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #fff7ec; /* warm cream classroom */
+  --color-surface: #ffffff;
+  --color-surface-raised: #fff0d6;
+  --color-text: #35235e; /* deep grape, softer than black */
+  --color-text-muted: #7a6aa6;
+  --color-border: #2c2150; /* dark chunky cartoon outline */
+  --color-primary: #4f7cff; /* toy blue */
+  --color-primary-hover: #3a63e6;
+  --color-primary-contrast: #ffffff;
+  --color-success: #23c268;
+  --color-warning: #ff9f1c;
+  --color-danger: #ff4d6d;
+  --color-danger-contrast: #ffffff;
+  --color-focus: #ffb703; /* sunny focus ring */
+}
+
+[data-design='kids'][data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #1b1236; /* night-sky purple */
+  --color-surface: #271a49;
+  --color-surface-raised: #34235f;
+  --color-text: #f4ecff;
+  --color-text-muted: #b9a8e6;
+  --color-border: #7c5cff; /* glowing outline */
+  --color-primary: #7aa2ff;
+  --color-primary-hover: #9cbcff;
+  --color-primary-contrast: #14102b;
+  --color-success: #4ade80;
+  --color-warning: #ffc23d;
+  --color-danger: #ff6b88;
+  --color-danger-contrast: #14102b;
+  --color-focus: #ffd60a; /* sunny focus ring */
 }
