@@ -13,7 +13,7 @@ import { DesignSystemPage } from './pages/design-system-page';
 import { NotFoundPage } from './pages/not-found-page';
 import { TodosPage } from './pages/todos-page';
 import { TESTID } from './testing/testids';
-import { ThemeProvider, useTheme } from './theme/theme-context';
+import { nextDesign, ThemeProvider, useTheme, type Design } from './theme/theme-context';
 import { Button } from './ui/button';
 import { Select } from './ui/select';
 
@@ -27,6 +27,15 @@ const queryClient = new QueryClient({
 });
 
 const LOCALE_LABELS: Record<Locale, string> = { en: 'English', ko: '한국어' };
+
+/** Short label shown on the design toggle button. */
+const DESIGN_BADGES: Record<Design, string> = { a: 'A', b: 'B', office: 'Office' };
+/** i18n key describing each design, for the toggle's aria-label. */
+const DESIGN_LABEL_KEYS = {
+  a: 'common.design.a',
+  b: 'common.design.b',
+  office: 'common.design.office',
+} as const;
 
 function Header() {
   const { t, locale, setLocale } = useI18n();
@@ -61,11 +70,11 @@ function Header() {
         <Button
           variant="ghost"
           onClick={toggleDesign}
-          aria-label={design === 'a' ? t('common.design.b') : t('common.design.a')}
+          aria-label={t(DESIGN_LABEL_KEYS[nextDesign(design)])}
           testId={TESTID.app.designToggle}
         >
           <Palette aria-hidden size="1em" />
-          {design.toUpperCase()}
+          {DESIGN_BADGES[design]}
         </Button>
         <Select<Locale>
           label={t('common.language')}

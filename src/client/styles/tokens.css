@@ -73,6 +73,31 @@
   --surface-shadow: none;
 }
 
+/* ── Design "office": 2000s–2010s MS Office — dense, beveled, businesslike ─── */
+[data-design='office'] {
+  /* The workhorse UI stack of the era: Segoe UI (Vista+) then Tahoma (XP). */
+  --font-sans: 'Segoe UI', Tahoma, Geneva, Verdana, 'Malgun Gothic', sans-serif;
+
+  --font-size-sm: 0.6875rem; /* 11px — toolbar/label text */
+  --font-size-body: 0.8125rem; /* 13px */
+  --font-size-lg: 1rem; /* 16px */
+  --font-size-xl: 1.125rem; /* 18px */
+  --font-size-2xl: 1.375rem; /* 22px */
+  --font-weight-heading: 700;
+  --line-height-body: 1.4; /* tight, information-dense */
+
+  --control-height: 1.75rem; /* compact toolbar controls */
+  --control-padding-x: var(--space-2);
+  --radius-control: 2px; /* nearly square */
+  --radius-surface: 2px;
+  --border-width: 1px;
+  --focus-ring-width: 1px;
+  --surface-shadow: none;
+
+  /* Restrained: state changes are instant — no easing, no motion. */
+  --duration-fast: 0s;
+}
+
 /* ── Semantic colors: design A ────────────────────────────────────────────── */
 [data-design='a'][data-theme='light'] {
   color-scheme: light;
@@ -145,4 +170,53 @@
   --color-danger: #ff8080;
   --color-danger-contrast: #000000;
   --color-focus: #82b1ff;
+}
+
+/* ── Semantic colors: design "office", light — silver/Luna chrome ─────────── */
+[data-design='office'][data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #d4d0c8; /* classic window-chrome gray */
+  --color-surface: #ffffff; /* document / input area */
+  --color-surface-raised: #ece9d8; /* toolbar band */
+  --color-text: #000000;
+  --color-text-muted: #4d4d4d;
+  --color-border: #808080; /* flat 1px control border */
+  --color-primary: #21569e; /* Office/Luna blue */
+  --color-primary-hover: #1b4580;
+  --color-primary-contrast: #ffffff;
+  --color-success: #2d7d2d;
+  --color-warning: #9c6500;
+  --color-danger: #a80000;
+  --color-danger-contrast: #ffffff;
+  --color-focus: #21569e;
+
+  /* Beveled-control edges + button faces (consumed by main.css office rules). */
+  --office-bevel-light: #ffffff; /* raised: top/left highlight */
+  --office-bevel-dark: #808080; /* raised: bottom/right shadow */
+  --office-btn-top: #fbfbfa;
+  --office-btn-bottom: #d7d3ca;
+}
+
+/* ── Semantic colors: design "office", dark — graphite ribbon ─────────────── */
+[data-design='office'][data-theme='dark'] {
+  color-scheme: dark;
+  --color-bg: #333333;
+  --color-surface: #2b2b2b;
+  --color-surface-raised: #3f3f3f;
+  --color-text: #f0f0f0;
+  --color-text-muted: #b0b0b0;
+  --color-border: #5a5a5a;
+  --color-primary: #4a8ad4;
+  --color-primary-hover: #6aa0e0;
+  --color-primary-contrast: #ffffff;
+  --color-success: #4ea64e;
+  --color-warning: #cf9b34;
+  --color-danger: #d16a6a;
+  --color-danger-contrast: #ffffff;
+  --color-focus: #7aa8e0;
+
+  --office-bevel-light: #5f5f5f;
+  --office-bevel-dark: #141414;
+  --office-btn-top: #4a4a4a;
+  --office-btn-bottom: #333333;
 }
