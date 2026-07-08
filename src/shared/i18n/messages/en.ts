@@ -24,6 +24,7 @@ export const en = {
   'common.theme.dark': 'Switch to dark theme',
   'common.design.a': 'Design A (aesthetic)',
   'common.design.b': 'Design B (high visibility)',
+  'common.design.office': 'Office skin (classic desktop)',
   'common.language': 'Language',
 
   'todos.title': 'Todos',
@@ -48,7 +49,7 @@ export const en = {
 
   'designSystem.title': 'Design System',
   'designSystem.description':
-    'Every token and component in one place. Use the header controls to toggle theme (light/dark), design variant (A/B) and language.',
+    'Every token and component in one place. Use the header controls to toggle theme (light/dark), design variant (A / B / Office) and language.',
   'designSystem.colors': 'Color tokens',
   'designSystem.typography': 'Typography',
   'designSystem.buttons': 'Buttons',

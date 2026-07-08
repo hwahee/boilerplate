@@ -457,3 +457,96 @@ a {
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border);
 }
+
+/* ============================================================================
+ * OFFICE SKIN — 2000s–2010s MS Office / Win32 look.
+ *
+ * Scoped to [data-design='office'] so designs A and B are untouched. The
+ * signature of the era is the 3D bevel: buttons look raised (light top/left,
+ * dark bottom/right) and press *in* on :active; inputs look sunken (the
+ * inverse bevel). Everything is dense, square-cornered and — deliberately —
+ * motionless (--duration-fast is 0s in the office token block).
+ * ==========================================================================*/
+
+/* Classic dotted Windows focus rectangle, hugging the control. */
+[data-design='office'] :focus-visible {
+  outline: 1px dotted var(--color-text);
+  outline-offset: 1px;
+}
+
+/* ── Beveled push-buttons ──────────────────────────────────────────────────*/
+[data-design='office'] .btn {
+  font-weight: 400;
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--office-bevel-light) var(--office-bevel-dark) var(--office-bevel-dark)
+    var(--office-bevel-light);
+  box-shadow: none;
+}
+
+[data-design='office'] .btn--secondary,
+[data-design='office'] .btn--ghost {
+  background: linear-gradient(var(--office-btn-top), var(--office-btn-bottom));
+  color: var(--color-text);
+}
+
+[data-design='office'] .btn--secondary:not(:disabled):hover,
+[data-design='office'] .btn--ghost:not(:disabled):hover {
+  background: linear-gradient(
+    color-mix(in srgb, var(--office-btn-top), white 12%),
+    color-mix(in srgb, var(--office-btn-bottom), white 12%)
+  );
+}
+
+[data-design='office'] .btn--primary {
+  background: linear-gradient(
+    color-mix(in srgb, var(--color-primary) 72%, white),
+    var(--color-primary)
+  );
+}
+
+[data-design='office'] .btn--primary:not(:disabled):hover {
+  background: linear-gradient(
+    color-mix(in srgb, var(--color-primary) 58%, white),
+    var(--color-primary-hover)
+  );
+}
+
+/* Press in: invert the bevel and nudge the label down-right. Use transform
+   (not padding) so the button's box is unchanged — padding would grow the
+   auto-width element and reflow its neighbors. */
+[data-design='office'] .btn:not(:disabled):active {
+  border-color: var(--office-bevel-dark) var(--office-bevel-light) var(--office-bevel-light)
+    var(--office-bevel-dark);
+  transform: translate(1px, 1px);
+}
+
+/* ── Sunken inputs / selects (both use .field__input) ──────────────────────*/
+[data-design='office'] .field__input {
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--office-bevel-dark) var(--office-bevel-light) var(--office-bevel-light)
+    var(--office-bevel-dark);
+  background: var(--color-surface);
+  border-radius: 1px;
+}
+
+/* ── Menu-bar style navigation ─────────────────────────────────────────────*/
+[data-design='office'] .app-nav a {
+  border-radius: 0;
+}
+
+[data-design='office'] .app-nav a:hover {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  outline: 1px solid var(--color-primary);
+}
+
+/* ── Panels: raised group-box bevel; badges go square ──────────────────────*/
+[data-design='office'] .card {
+  border-color: var(--office-bevel-light) var(--office-bevel-dark) var(--office-bevel-dark)
+    var(--office-bevel-light);
+}
+
+[data-design='office'] .badge {
+  border-radius: 2px;
+}
