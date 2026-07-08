@@ -18,7 +18,7 @@ export type Theme = 'light' | 'dark';
 export type Design = 'a' | 'b' | 'office' | 'kids';
 
 /** The design a toggle click moves to next — cycles A → B → Office → Kids → A. */
-const NEXT_DESIGN: Record<Design, Design> = { a: 'b', b: 'office', office: 'a', kids: 'a' };
+const NEXT_DESIGN: Record<Design, Design> = { a: 'b', b: 'office', office: 'kids', kids: 'a' };
 
 export function nextDesign(current: Design): Design {
   return NEXT_DESIGN[current];
