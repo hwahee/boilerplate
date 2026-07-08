@@ -3,10 +3,11 @@
  * and consumed purely by CSS custom properties (src/client/styles/tokens.css):
  *
  *   data-theme:  'light' | 'dark'     — color scheme
- *   data-design: 'a' | 'b' | 'office' — design variant:
+ *   data-design: 'a' | 'b' | 'office' | 'kids' — design variant:
  *       A      = aesthetic-first (refined spacing, softer contrast)
  *       B      = visibility-first (larger type, high contrast, bigger targets)
  *       Office = 2000s MS Office (dense, beveled controls, no motion)
+ *       Kids  = playground/toy vibe (chunky, rounded, exaggerated motion)
  *
  * Both persist to localStorage. The initial theme derives from the OS
  * preference — computed once, not stored as extra state.
@@ -14,10 +15,10 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 export type Theme = 'light' | 'dark';
-export type Design = 'a' | 'b' | 'office';
+export type Design = 'a' | 'b' | 'office' | 'kids';
 
-/** The design a toggle click moves to next — cycles A → B → Office → A. */
-const NEXT_DESIGN: Record<Design, Design> = { a: 'b', b: 'office', office: 'a' };
+/** The design a toggle click moves to next — cycles A → B → Office → Kids → A. */
+const NEXT_DESIGN: Record<Design, Design> = { a: 'b', b: 'office', office: 'a', kids: 'a' };
 
 export function nextDesign(current: Design): Design {
   return NEXT_DESIGN[current];
@@ -43,7 +44,7 @@ function initialTheme(): Theme {
 
 function initialDesign(): Design {
   const stored = localStorage.getItem(DESIGN_KEY);
-  return stored === 'b' || stored === 'office' ? stored : 'a';
+  return stored === 'b' || stored === 'office' || stored === 'kids' ? stored : 'a';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

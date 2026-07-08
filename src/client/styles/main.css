@@ -550,3 +550,109 @@ a {
 [data-design='office'] .badge {
   border-radius: 2px;
 }
+
+/* ============================================================================
+ * KIDS SKIN — exaggerated, playful interactions.
+ *
+ * Everything here is scoped to [data-design='kids'], so designs A and B are
+ * untouched. Motion knobs (--hover-scale, --ease-interaction, …) come from the
+ * kids token block; the transforms below just consume them. All transform-based
+ * motion is gated behind prefers-reduced-motion so it stays accessible.
+ * ==========================================================================*/
+
+/* Chunky sticker-button: a hard bottom shadow reads as a pressable 3D stud. */
+[data-design='kids'] .btn {
+  font-weight: 800;
+  box-shadow: 0 5px 0 rgb(0 0 0 / 18%);
+}
+
+[data-design='kids'] .btn--ghost {
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Broaden the transition to include transform/box-shadow and swap in the
+     springy easing so every state change overshoots and settles. */
+  [data-design='kids'] .btn,
+  [data-design='kids'] .field__input,
+  [data-design='kids'] .app-nav a,
+  [data-design='kids'] .todo-item,
+  [data-design='kids'] .card,
+  [data-design='kids'] .badge,
+  [data-design='kids'] .checkbox__input {
+    transition:
+      transform var(--duration-fast) var(--ease-interaction),
+      box-shadow var(--duration-fast) var(--ease-interaction),
+      background-color var(--duration-fast) var(--ease-interaction),
+      border-color var(--duration-fast) var(--ease-interaction),
+      color var(--duration-fast) var(--ease-interaction);
+  }
+
+  /* Buttons: bounce up + tilt on hover, deep squish on press. */
+  [data-design='kids'] .btn:not(:disabled):hover {
+    transform: translateY(var(--hover-lift)) scale(var(--hover-scale)) rotate(var(--hover-rotate));
+    box-shadow: 0 9px 0 rgb(0 0 0 / 18%);
+  }
+
+  [data-design='kids'] .btn:not(:disabled):active {
+    transform: translateY(2px) scale(var(--press-scale));
+    box-shadow: 0 1px 0 rgb(0 0 0 / 18%);
+  }
+
+  /* Nav links do a happy wiggle. */
+  [data-design='kids'] .app-nav a:hover {
+    transform: scale(1.12) rotate(-4deg);
+    color: var(--color-primary);
+  }
+
+  /* Text inputs pop and get a fat colourful glow when focused. */
+  [data-design='kids'] .field__input:focus,
+  [data-design='kids'] .field__input:focus-visible {
+    transform: scale(var(--focus-scale));
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-focus) 55%, transparent);
+    animation: kids-focus-pop var(--duration-fast) var(--ease-interaction);
+  }
+
+  /* Cards / todo rows lift and tilt like a picked-up toy card. */
+  [data-design='kids'] .card:hover,
+  [data-design='kids'] .todo-item:hover {
+    transform: translateY(-6px) rotate(-1deg) scale(1.02);
+  }
+
+  /* Checking a box gives a satisfying celebratory pop. */
+  [data-design='kids'] .checkbox__input:checked {
+    animation: kids-check-pop 0.4s var(--ease-interaction);
+  }
+
+  /* Spin the loading spinner with an eager, bouncy cadence. */
+  [data-design='kids'] .spinner {
+    animation: spinner-rotate 0.55s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+  }
+}
+
+@keyframes kids-focus-pop {
+  0% {
+    transform: scale(1);
+  }
+  55% {
+    transform: scale(calc(var(--focus-scale) + 0.06));
+  }
+  100% {
+    transform: scale(var(--focus-scale));
+  }
+}
+
+@keyframes kids-check-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.5) rotate(-12deg);
+  }
+  70% {
+    transform: scale(0.85) rotate(6deg);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

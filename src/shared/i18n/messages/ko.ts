@@ -21,6 +21,7 @@ export const ko: Record<MessageKey, string> = {
   'common.design.a': '디자인 A (심미성)',
   'common.design.b': '디자인 B (시인성)',
   'common.design.office': '오피스 스킨 (클래식 데스크톱)',
+  'common.design.kids': '어린이 스킨 (놀이터)',
   'common.language': '언어',
 
   'todos.title': '할 일',
@@ -45,7 +46,7 @@ export const ko: Record<MessageKey, string> = {
 
   'designSystem.title': '디자인 시스템',
   'designSystem.description':
-    '모든 토큰과 컴포넌트를 한곳에서 확인합니다. 헤더의 컨트롤로 테마(라이트/다크), 디자인(A / B / 오피스), 언어를 전환해 보세요.',
+    '모든 토큰과 컴포넌트를 한곳에서 확인합니다. 헤더의 컨트롤로 테마(라이트/다크), 디자인(A / B / 오피스 / 어린이), 언어를 전환해 보세요.',
   'designSystem.colors': '컬러 토큰',
   'designSystem.typography': '타이포그래피',
   'designSystem.buttons': '버튼',
