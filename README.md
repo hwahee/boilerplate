@@ -1,185 +1,189 @@
-# Bun Fullstack Boilerplate
+# Mobile Fullstack Boilerplate
 
-React + Bun + Bun server 기반의 풀스택 모노레포 보일러플레이트입니다. 서버와 클라이언트가
-하나의 저장소에서 살고, 공통 코드는 `src/shared`에 둡니다.
+React Native(Expo) 앱 + Bun 서버가 한 저장소에 사는 **모바일 서비스 모노레포
+보일러플레이트**입니다. 공통 코드는 `packages/shared`(순수 TypeScript)에 두고
+Metro(Hermes)와 Bun 이 같은 소스를 소비합니다.
 
-```
-src/
-├── shared/          # 서버·클라이언트 공통 (양쪽 모두에서 import 가능)
-│   ├── validation/  # 스키마 검증 파사드 (현재 zod/mini, 교체 가능)
-│   ├── i18n/        # 로케일 협상 + 메시지 카탈로그 (en/ko)
-│   ├── time/        # UTC 전용 시간 유틸 (경계에서만 타임존 변환)
-│   ├── api/         # 페이지네이션 규약, 에러 엔벨로프, 버전 핸드셰이크
-│   └── domain/      # 도메인 타입 + 검증기 (서버·클라이언트 공용 계약)
-├── server/          # Bun server (API + 클라이언트 서빙 + 워커)
-│   ├── http/        # 라우트 공통 미들웨어 (CORS, 버전, 에러 매핑, locale)
-│   ├── routes/      # 엔드포인트 정의
-│   ├── services/    # 비즈니스 로직 (트랜잭션 경계가 여기서 드러남)
-│   ├── repositories/# 영속성 계약 + postgres/in-memory 구현
-│   ├── db/          # Bun 내장 SQL 드라이버, 마이그레이션 러너
-│   ├── pubsub/      # 인스턴스 간 통신 (memory/redis 드라이버)
-│   └── container.ts # 컴포지션 루트 — 프로세스당 싱글톤 관리
-└── client/          # React SPA
-    ├── api/         # ★ 모든 API가 endpoints.ts 한 곳에 문서화되어 모임
-    ├── ui/          # 디자인 시스템 컴포넌트
-    ├── styles/      # 디자인 토큰 (라이트/다크 × 디자인 A/B)
-    ├── theme/ i18n/ # 테마·로케일 컨텍스트
-    ├── testing/     # data-testid 레지스트리 (docs/ui-automation.md 참고)
-    └── pages/       # Todos(데모), Design System, NotFound
-```
+> 전제: 앱 런타임은 Metro/Hermes입니다. Bun 은 앱의 런타임이 아니라 **패키지
+> 매니저·스크립트 러너·서버 런타임**입니다. HMR 은 앱=Metro Fast Refresh,
+> 서버=`bun --watch` 로 각각 동작합니다.
 
-## 시작하기
+## 온보딩 (명령 한 번씩)
 
 ```bash
-bun install               # 의존성 설치 (+ husky 훅 설치)
-cp .env.example .env      # 환경 설정 — 비밀값은 절대 커밋 금지
-
-bun run db:setup          # docker로 Postgres 기동 + 마이그레이션 + 시드 (한 번에)
-bun run dev               # 개발 서버 (서버 watch + 클라이언트 HMR) → http://localhost:3000
+bun install                                  # 1. 전체 워크스페이스 설치
+cp apps/server/.env.example apps/server/.env # 2. 서버 환경 파일
+bun run db:setup                             # 3. Postgres 기동 + 마이그레이션 + 시드
+bun run dev:server                           # 4. API 서버 (bun --watch)
+bun run dev:mobile                           # 5. 앱 (expo start — 별도 터미널)
 ```
 
-DB 없이 바로 실행하려면 `.env`에서 `DB_DRIVER=memory`로 바꾸면 됩니다(테스트도 이 드라이버를 사용).
+테스트/품질 게이트는 외부 환경 없이 한 번에 돕니다(인메모리 DB):
 
-| 명령            | 설명                                                                  |
-| --------------- | --------------------------------------------------------------------- |
-| `bun run dev`   | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                          |
-| `bun test`      | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행 |
-| `bun run check` | prettier + eslint + tsc + knip + test 전체 게이트 (pre-push와 동일)   |
-| `bun run build` | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)    |
-| `bun run start` | 빌드 산출물 실행                                                      |
-| `bun run db:*`  | `db:up` / `db:migrate` / `db:seed` / `db:setup`                       |
+```bash
+bun test          # 단위 + API 통합 테스트
+bun run check     # format + lint + typecheck + knip + test
+```
+
+## 구조
+
+```
+apps/
+  server/          # Bun HTTP+WebSocket 서버 (web/worker 역할 분리 가능)
+    src/
+      config.ts        # .env 스키마 검증 (부팅 시 fail-fast)
+      container.ts     # 컴포지션 루트 — 프로세스당 lazy 싱글톤
+      app.ts           # 라우트 테이블 + WS + pub/sub→WS 브리지
+      http/            # 에러 봉투, 로케일 협상, CORS, 426 버전 게이트
+      repositories/    # 인터페이스 + postgres/memory 구현 (동일 계약)
+      services/        # 비즈니스 로직 + 명시적 트랜잭션 경계
+      push/            # 푸시 발송 파사드 (dry-run 기본 / expo)
+      pubsub/          # memory | redis (수평 확장 팬아웃)
+    migrations/        # SQL 마이그레이션 (bun run db:migrate)
+  mobile/          # Expo(React Native) 앱 — iPhone/Galaxy 폰 전용
+    app.config.ts      # APP_ENV 하나로 dev/stg/prod 전환 (나란히 설치 가능)
+    src/
+      boot/            # 부트 시퀀스 상태 머신 + 광고 슬롯 게이트
+      version/         # 업데이트 정책·OTA 파사드·스토어 이동(플랫폼 분리 예시)
+      config/          # 원격 설정: 폴링(ETag/304) + WS push, useConfig()
+      api/             # API 카탈로그(endpoints.ts) + TanStack Query 훅
+      theme/           # 디자인 토큰 A/B × 라이트/다크
+      components/      # 디자인 시스템 (testID 필수 prop)
+      offline/         # 오프라인 배너 + 쿼리 캐시 디스크 persist
+      storage/         # kv(AsyncStorage)·secure(Keychain/Keystore) 파사드
+      analytics/       # 크래시/애널리틱스 파사드 (콘솔 더미)
+packages/
+  shared/          # 순수 TS: 검증 파사드, 도메인 계약, i18n, 시간, semver, 커서
+docs/              # platform-decisions / ui-automation / release-playbook
+```
 
 ## 아키텍처 결정
 
-### 의존 방향 (ESLint로 강제)
+- **의존 방향**: `shared → (없음)`, `server → shared(+mobile 허용)`,
+  `mobile → shared` (server 런타임 코드 금지, 타입 전용 import 만 허용).
+  ESLint `no-restricted-imports` 로 강제합니다.
+- **검증 파사드**: 스키마 라이브러리(현재 zod/mini)는 `packages/shared/src/validation`
+  뒤에 숨어 있습니다. `Validator<T>` 계약만 소비하므로 yup 등으로 교체해도 소비자
+  코드는 무변경. zod 직접 import 는 ESLint 가 차단합니다.
+- **시간은 UTC**: 서버·DB(`timestamptz`)는 항상 UTC. 타임존 변환은 표시 시점
+  (`formatUtcInTimeZone`, 기기 타임존)에서만.
+- **i18n**: 카탈로그는 shared 에 있고 서버(에러 메시지, `Accept-Language` 협상)와
+  앱(UI, 기기 로케일 감지 + 인앱 변경)이 같은 키를 씁니다.
+- **목록 API = 커서 페이지네이션**: `?limit&cursor` → `{items, nextCursor}`.
+  keyset 방식이라 스크롤 중 삽입/삭제에도 중복·누락이 없고, `useInfiniteQuery`
+  의 `getNextPageParam` 에 그대로 물립니다.
+- **환경 전환은 설정 한 번**: 서버=.env 교체(부팅 시 스키마 검증), 앱=`APP_ENV`
+  빌드 프로필(dev/stg/prod 별 앱 이름·번들 ID·API URL, 한 기기에 나란히 설치).
+  **앱 번들은 공개물** — extra 에 비밀을 넣지 않습니다. 비밀이 필요한 일은 전부
+  서버가 대행합니다.
+- **GraphQL 미사용**: 도입한다면 persisted query(핑거프린트만 일반 허용, 임의
+  쿼리는 관리자 토큰)를 전제로 하세요 — admin 라우트 주석 참고.
 
-- `client` → `server` 런타임 import **금지** (타입 전용 import는 허용).
-- `shared` → `server`/`client` import 금지.
-- `zod`는 `src/shared/validation` 안에서만 import 가능 — 나머지는 전부 파사드를 통합니다.
+## 앱 버전·업데이트 정책 (요약 — 상세는 docs/release-playbook.md)
 
-### 검증 파사드 (`@shared/validation`)
+- **서버 `version_policies` 테이블이 단일 진실 공급원**입니다.
+  `GET /api/version-policy` 를 앱이 시작 시 + 포그라운드 복귀 시 확인합니다.
+- 세 경로: **OTA**(expo-updates, 버튼 한 번에 다운로드→재시작, 채널 파사드로 EAS/
+  셀프호스팅 교체 가능) / **스토어**(App Store·Play 이동, Android in-app update
+  자리 마련) / **강제**(`minSupportedVersion` 미만 전체 화면 차단).
+- 선택 업데이트의 "나중에"는 같은 버전을 3일간 침묵시킵니다(공유 `decideUpdate`).
+- **버전 스큐**: 앱은 모든 요청에 `X-App-Version`/`X-Platform` 을 보내고, 서버는
+  지원 종료 버전에 **426 UPGRADE_REQUIRED** 를 반환합니다. breaking change 는
+  오직 `minSupportedVersion` 인상(=강제 업데이트)으로만 해소합니다.
+  하위호환 규약(필드 제거 금지 등)은 release-playbook 에 문서화되어 있습니다.
 
-모든 소비자는 라이브러리 중립적인 `Validator<T>` 인터페이스(`parse`/`safeParse`)에만
-의존합니다. 현재 구현은 zod/mini이며, yup 등으로 바꾸려면 어댑터 하나를 새로 쓰고
-스키마 정의 파일만 갱신하면 됩니다. 라우트·폼·설정 로딩 코드는 전혀 바뀌지 않습니다.
+## 부트 시퀀스 / 원격 설정 / 점검 모드
 
-### 시간 정책
+- 네이티브 스플래시 → JS 부트 화면 → 메인. 전이는 **명시적 상태 머신**
+  (`apps/mobile/src/boot/machine.ts`, 순수 리듀서 + 단위 테스트)으로 구현.
+  부트 중: 원격 설정 로드, 버전 정책 확인(강제/점검이면 차단), 세션 복원 자리.
+- **광고 슬롯**: 인터페이스 + 더미 구현만 포함(`src/ads`). 최소 노출 시간·스킵
+  허용은 원격 설정(`bootAd`)이 제어하고, 로드 실패/타임아웃은 절대 진입을 막지
+  않습니다. 시동 화면 디자인은 `BootSplashDesign.tsx` 한 파일 교체로 바뀝니다.
+- **원격 설정**(`app_config` 테이블, revision 기반): 폴링(간격도 원격 제어, 변경
+  없으면 ETag/304로 무본문) + WebSocket push(다중 인스턴스는 pub/sub 팬아웃) +
+  포그라운드 복귀 보완. 소비는 `useConfig()` 하나. 데모: 기능 플래그, 공지 배너,
+  **점검 모드 kill switch**(켜면 즉시 전체 앱이 점검 화면으로 전환).
 
-서버 내부는 항상 UTC입니다(`process.env.TZ = 'UTC'`, DB는 `timestamptz`, 애플리케이션은
-`UtcIsoString` 브랜드 타입). 타임존 변환은 오직 경계에서만 — 클라이언트가
-`formatUtcInTimeZone`으로 표시할 때 수행합니다.
+```bash
+# 점검 모드 켜보기 (ADMIN_TOKEN 은 apps/server/.env)
+curl -X PUT localhost:3000/api/admin/app-config/maintenance \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "content-type: application/json" \
+  -d '{"value":{"enabled":true,"message":"점검 중입니다 (~09:00 UTC)"}}'
+```
 
-### 목록 API 규약 (`@shared/api/pagination`)
+## 지원 매트릭스
 
-모든 목록 엔드포인트는 `?page&pageSize&sortBy&sortOrder` + 엔드포인트별 평면 필터
-파라미터를 받고, `Page<T>` 엔벨로프(`items/page/pageSize/totalItems/totalPages/hasNextPage`)로
-응답합니다. 정렬 필드는 엔드포인트별 화이트리스트로만 허용됩니다.
+| 항목                                    | 지원                                        |
+| --------------------------------------- | ------------------------------------------- |
+| 기기                                    | Apple iPhone, Samsung Galaxy **폰**         |
+| iOS                                     | 15.1+ (Expo SDK 54 / RN 0.81 기준)          |
+| Android                                 | 7.0(API 24)+ — 삼성 기기 기준 One UI 시리즈 |
+| 웹 / 태블릿 레이아웃 / 폴더블 특수 대응 | **없음** (의도적 배제)                      |
 
-### 환경 설정
+플랫폼 분기 원칙과 결정 이력(`*.ios.ts`/`*.android.ts` 분리 컨벤션 포함)은
+[docs/platform-decisions.md](docs/platform-decisions.md).
 
-로컬/개발/운영 전환은 `.env`(또는 배포 환경 변수) 교체 한 번으로 끝나며 코드 수정이
-필요 없습니다. 모든 설정은 부팅 시 `src/server/config.ts`에서 검증됩니다.
-`.env*`는 gitignore되어 있고 `.env.example`만 커밋합니다.
+## 로컬 개발 연결 (앱 ↔ 로컬 서버)
 
-### 데이터베이스
+| 실행 환경          | API 주소                       | 비고                                                             |
+| ------------------ | ------------------------------ | ---------------------------------------------------------------- |
+| iOS 시뮬레이터     | `http://localhost:3000`        | 기본값 (자동)                                                    |
+| Android 에뮬레이터 | `http://10.0.2.2:3000`         | 기본값 (자동) — 호스트 루프백 별칭                               |
+| 실기기             | `http://<맥/PC의 LAN IP>:3000` | `EXPO_PUBLIC_API_URL=http://192.168.x.x:3000 bun run dev:mobile` |
 
-- 기본 Postgres(Bun 내장 SQL 클라이언트, 외부 패키지 없음). 리포지토리 인터페이스
-  (`src/server/repositories/types.ts`) 뒤에 있어서 다른 DB로 교체하려면 구현 파일 하나만
-  새로 쓰면 됩니다. 테스트·로컬용 in-memory 구현이 이미 동일 계약을 따릅니다.
-- 마이그레이션: `migrations/NNNN_name.sql` 파일이 곧 스키마 이력입니다.
-  `bun run db:migrate`가 순서대로 적용하고 `schema_migrations`에 기록하며, advisory lock으로
-  다중 인스턴스 동시 기동에도 안전합니다. 시드는 `bun run db:seed`(멱등).
-- 트랜잭션 경계는 서비스 계층의 `uow.run(async (tx) => { … })` 블록으로 명시됩니다
-  (예: `TodoService.create` — todo insert + audit log가 원자적).
-- N+1: 목록 조회는 `count(*) OVER ()` 윈도 함수로 데이터+총계를 한 번에 가져옵니다.
-  연관 행이 생기면 행별 쿼리 대신 `WHERE id IN (…)` 배치 조회를 사용하세요
-  (리포지토리 주석 참고).
+API base URL 은 코드가 아니라 환경 설정(`EXPO_PUBLIC_API_URL` 또는 빌드 프로필)로만
+제어합니다 (`apps/mobile/src/config/env.ts`).
 
-### 수평 확장
+## 서버 하이라이트
 
-- **pub/sub 버스** (`src/server/pubsub`): 인스턴스 간 통신 추상화. 기본 `memory`,
-  다중 인스턴스에서는 `PUBSUB_DRIVER=redis`(+`REDIS_URL`)로 전환 — Bun 내장 Redis
-  클라이언트를 사용하며 코드 변경이 없습니다.
-- **워커 역할**: `SERVER_ROLE=web|worker|all`. 같은 바이너리를 HTTP 전용/백그라운드 잡
-  전용으로 나눠 띄울 수 있습니다. 잡은 pub/sub `jobs` 채널로 흐릅니다(`src/server/worker.ts`).
-- **싱글톤**: 컨테이너(`src/server/container.ts`)에서 resolve되는 모든 서비스는 프로세스당
-  싱글톤(lazy + memoized)입니다. 새로 싱글톤이 필요하면 같은 방식으로 등록하면 됩니다.
-- **WebSocket**: `/ws`로 todo 변경 이벤트를 push합니다. 브리지가 pub/sub을 경유하므로
-  redis 드라이버에서는 다른 인스턴스에 붙은 소켓에도 팬아웃됩니다.
+- **수평 확장**: 인스턴스 간 통신은 pub/sub 추상화(`PUBSUB_DRIVER=memory|redis`).
+  WS 팬아웃·버전 정책 캐시 무효화·백그라운드 잡이 모두 이 버스를 탑니다.
+- **역할 분리**: `SERVER_ROLE=web|worker|all` — 같은 바이너리로 HTTP 와 잡 처리를
+  독립 스케일.
+- **리포지토리 패턴**: Postgres(Bun 내장 SQL)·in-memory 가 같은 계약. 테스트와
+  `DB_DRIVER=memory` 로컬 해킹은 외부 의존성 0.
+- **트랜잭션 경계 명시**: 서비스 코드의 `uow.run(async (tx) => …)` 블록이 곧 경계.
+- **N+1 방지**: 목록은 페이지당 1쿼리(keyset). 관련 행이 생기면 `IN (…)` 일괄 조회
+  주석 참고 (`repositories/types.ts`).
+- **헬스체크**: `/api/health/live`(프로세스 생존) / `/api/health/ready`(DB 연결,
+  종료 드레인 중 503) 분리. graceful shutdown 은 readiness 하강 → 드레인 →
+  in-flight 정리 → 리소스 해제 순.
+- **푸시 파사드**: `PUSH_DRIVER=dry-run`(기본, 자격증명 불필요·로그로 확인) |
+  `expo`. 토큰 등록/해제 API + `POST /api/admin/push/broadcast`(워커가 발송).
 
-### Graceful shutdown & 롤링 배포 버전 스큐
+## API 요약
 
-SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트래픽을 뺌
-(`SHUTDOWN_DRAIN_MS` 동안 대기) → ② 처리 중인 요청을 끝까지 마친 뒤 리스너 종료
-→ ③ DB/Redis 등 자원 정리 후 종료.
+| 메서드/경로                                                 | 설명                                    |
+| ----------------------------------------------------------- | --------------------------------------- |
+| `GET /api/health/live` · `/ready`                           | 헬스체크 (생존/트래픽 수용)             |
+| `GET /api/version-policy?platform=`                         | 버전 정책 (426 게이트 제외 대상)        |
+| `GET /api/app-config`                                       | 원격 설정 (ETag/304, 게이트 제외 대상)  |
+| `GET/POST /api/todos`, `GET/PATCH/DELETE /api/todos/:id`    | 데모 도메인 (커서 목록)                 |
+| `POST /api/push-tokens`, `POST /api/push-tokens/unregister` | 푸시 토큰 등록/해제                     |
+| `PUT /api/admin/version-policy/:platform`                   | 정책 갱신 (Bearer ADMIN_TOKEN)          |
+| `PUT /api/admin/app-config/:key`                            | 설정 갱신 + WS 브로드캐스트             |
+| `POST /api/admin/push/broadcast`                            | 전체 푸시(잡 큐 경유)                   |
+| `WS /ws`                                                    | `config.changed` / `todos.changed` push |
 
-롤링 배포 중 구버전 클라이언트 ↔ 신버전 서버(또는 그 반대) 조합 문제는 버전
-핸드셰이크로 차단합니다: 빌드 시 git SHA가 서버·클라이언트 번들 양쪽에 주입되고
-(`APP_BUILD_VERSION` define), 클라이언트는 모든 API 요청에 `X-App-Version` 헤더를
-보냅니다. 불일치 시 서버가 409 `VERSION_MISMATCH`를 반환하고 클라이언트는 1회
-새로고침하여 새 서버의 에셋을 받아옵니다. 서버 번들이 자신과 같은 빌드의 클라이언트를
-내장하므로(단일 산출물) 항상 정합성이 보장됩니다. (`src/shared/api/version.ts`)
+에러는 항상 `{ error: { code, message(로컬라이즈드), details? } }` 봉투입니다.
 
-### 헬스체크
+## DX / CI / CD
 
-- `GET /api/health/live` — 프로세스 생존 (의존성 안 봄)
-- `GET /api/health/ready` — DB 연결 여부 구분(`db: up|down`), 종료 중이면 503
+- `bun run check` = prettier + eslint(경계 규칙 포함) + tsc(3 워크스페이스) +
+  knip + bun test. husky pre-commit(staged lint/format), pre-push(전체 게이트).
+- GitHub Actions: [ci.yml](.github/workflows/ci.yml) 이 push 마다 JS 레벨 검증,
+  [native-build.yml](.github/workflows/native-build.yml) 이 수동/태그 트리거로
+  EAS Build (EXPO_TOKEN 시크릿 필요 — 파일 헤더에 설정법).
+- 서버는 Bun 번들러로 빌드(`bun run build:server`), Docker 로 DB 기동 +
+  컨테이너 빌드(`docker compose --profile app up --build`).
+- **앱 버전 규약**: semver 는 `apps/mobile/app.config.ts` 의 `version` 이 유일한
+  출처, 플랫폼 빌드 넘버는 EAS `autoIncrement` 로 자동 증가. 코드사이닝 자산은
+  커밋 금지(gitignore 등록) — 관리법은 release-playbook.
 
-### CORS
+## 문서
 
-허용 origin은 `CORS_ORIGINS` 환경 변수(콤마 구분)로만 제어합니다. 와일드카드 없음,
-암묵적 허용 없음 (`src/server/http/cors.ts`).
-
-### i18n
-
-`@shared/i18n` 파사드를 서버(에러 메시지 — `Accept-Language`/`?lang=` 협상)와
-클라이언트(UI 문자열 — 로케일 컨텍스트)가 공유합니다. 로케일 추가는 카탈로그 파일
-하나 + 등록 한 줄입니다. DB에는 로케일 독립적인 데이터만 저장합니다.
-
-## 클라이언트
-
-- **API 카탈로그**: 모든 엔드포인트는 `src/client/api/endpoints.ts` 한 곳에 상세 주석과
-  함께 정의됩니다. 컴포넌트는 `fetch`를 직접 부르지 않고 이 카탈로그(또는 그 위의
-  TanStack Query 훅 `queries.ts`)만 사용합니다.
-- **TanStack Query**: 목록 조회는 로딩/에러(재시도 버튼)/데이터/빈 상태를 모두 처리하고,
-  mutation은 성공 시 목록 캐시를 invalidate합니다. 상태 토글은 **optimistic update**
-  (스냅샷 → 즉시 반영 → 실패 시 롤백 → settle 시 재동기화)로 구현되어 있습니다.
-- **최소 상태**: 페이지/필터/정렬은 URL 쿼리에서 파생, 서버 데이터는 쿼리 캐시에만 존재.
-  로컬 `useState`는 "아직 제출 안 된 폼 입력"뿐입니다.
-- **라우팅**: react-router (BrowserRouter). 서버의 SPA 캐치올이 딥링크를 지원합니다.
-- **디자인 시스템**: 토큰 3계층(원시 → 디자인 치수 → 시맨틱 컬러)으로 구성되며
-  `/design-system` 페이지에서 전부 확인할 수 있습니다. `<html>`의 `data-theme`
-  (light/dark)와 `data-design`(A=심미성/B=시인성) 속성만으로 전환됩니다 — 헤더의 토글
-  버튼으로 즉시 스위칭됩니다. 아이콘은 lucide-react.
-- **UI 자동화 / 접근성**: 모든 인터랙티브 컴포넌트는 `testId`가 **필수 prop**이며 값은
-  `src/client/testing/testids.ts` 레지스트리에서만 나옵니다. WAI-ARIA(라벨, live region,
-  `aria-busy`, `aria-current`, skip link, 네이티브 컨트롤 우선)를 준수합니다.
-  전체 규약은 **[docs/ui-automation.md](docs/ui-automation.md)** 한 문서에서 확인하세요.
-
-## CI / DX
-
-- **GitHub Actions** (`.github/workflows/ci.yml`): 모든 push마다
-  prettier → eslint → tsc → knip → test → build.
-- **husky + lint-staged**: pre-commit에 staged 파일 lint/format, pre-push에
-  `bun run check` 전체 게이트.
-- **빌드**: Bun 번들러 단독 사용. `bun run build` 한 번으로 서버+클라이언트+마이그레이터가
-  `dist/`에 떨어집니다. 개발 모드는 Bun의 HTML import 기반 HMR.
-- **Docker**:
-  - DB만: `bun run db:up` (redis 포함: `docker compose --profile redis up -d`)
-  - 컨테이너 안에서 빌드까지: `docker compose --profile app up --build`
-    (멀티스테이지 Dockerfile — 런타임 이미지에는 빌드 산출물만 포함)
-
-## GraphQL을 도입한다면 (가이드)
-
-이 보일러플레이트는 REST 기반이지만, GraphQL을 붙일 경우 **persisted query** 방식을
-따르세요: 앱 안에 정의된 각 쿼리의 핑거프린트(해시)를 빌드 시 저장해 두고, 일반
-사용자 토큰은 등록된 해시의 쿼리만 실행할 수 있게 하며, 임의 쿼리는 관리자 토큰에만
-허용합니다. 버전 핸드셰이크(`X-App-Version`)와 동일하게 빌드 시점 주입 패턴을 재사용할
-수 있습니다.
-
-## 테스트 전략
-
-- **단위**: 비즈니스 로직(`TodoService`) — 트랜잭션 롤백, 이벤트 발행, 성공/실패 케이스.
-- **통합**: 실제 앱을 임시 포트에 띄워 HTTP로 검증 — CRUD, 페이지네이션/정렬/필터,
-  검증 실패(400)와 로컬라이즈된 메시지, 404, 버전 스큐(409), CORS 허용/거부, 헬스체크.
-- 전부 in-memory 드라이버로 돌므로 **`bun test` 하나로, 외부 환경 없이** 실행됩니다.
+- [docs/platform-decisions.md](docs/platform-decisions.md) — 플랫폼 분기 결정 이력
+- [docs/ui-automation.md](docs/ui-automation.md) — testID 규약 + Maestro E2E
+- [docs/release-playbook.md](docs/release-playbook.md) — OTA/스토어/강제 업데이트
+  판단 기준·절차, API 하위호환 규약, 코드사이닝

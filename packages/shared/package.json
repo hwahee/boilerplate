@@ -1,0 +1,21 @@
+{
+  "name": "@app/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure-TypeScript code shared by the Bun server and the Expo app. No platform (Node/Bun/browser/native) dependencies allowed — both Metro and Bun consume these sources directly.",
+  "exports": {
+    "./validation": "./src/validation/index.ts",
+    "./i18n": "./src/i18n/index.ts",
+    "./time": "./src/time/index.ts",
+    "./semver": "./src/semver/index.ts",
+    "./api/*": "./src/api/*.ts",
+    "./domain/*": "./src/domain/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  }
+}

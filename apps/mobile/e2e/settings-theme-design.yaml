@@ -1,0 +1,40 @@
+# Settings flow: switch design variant + theme + language and verify the
+# design-system entry stays reachable.
+# Run with: maestro test apps/mobile/e2e/settings-theme-design.yaml
+appId: com.example.mobileboilerplate.dev
+---
+- launchApp
+- runFlow:
+    when:
+      visible:
+        id: 'boot.ad.skip'
+    commands:
+      - tapOn:
+          id: 'boot.ad.skip'
+- extendedWaitUntil:
+    visible:
+      id: 'todos.screen'
+    timeout: 15000
+
+- tapOn:
+    id: 'tabs.settings'
+- assertVisible:
+    id: 'settings.screen'
+
+# Design B (high visibility), dark theme, Korean
+- tapOn:
+    id: 'settings.design.b'
+- tapOn:
+    id: 'settings.theme.dark'
+- tapOn:
+    id: 'settings.locale.ko'
+- assertVisible:
+    text: '설정'
+
+# Back to defaults
+- tapOn:
+    id: 'settings.locale.system'
+- tapOn:
+    id: 'settings.theme.system'
+- tapOn:
+    id: 'settings.design.a'

@@ -1,6 +1,8 @@
 name: CI
 
-# Runs on every push (and PRs from forks) — see the DX section of the README.
+# JS-level verification on every push/PR: format, lint, typecheck, dead-code,
+# tests, server build. Native app builds are deliberately NOT here — they are
+# heavy and credentialed; see native-build.yml (manual / tag triggered).
 on:
   push:
   pull_request:
@@ -21,17 +23,17 @@ jobs:
       - name: Prettier (format check)
         run: bun run format:check
 
-      - name: ESLint
+      - name: ESLint (incl. architecture boundaries)
         run: bun run lint
 
-      - name: TypeScript (strict typecheck)
+      - name: TypeScript (strict typecheck, all workspaces)
         run: bun run typecheck
 
       - name: Knip (unused files/exports/dependencies)
         run: bun run knip
 
-      - name: Tests (unit + API integration, in-memory DB)
+      - name: Tests (shared + server + app logic, in-memory DB)
         run: bun test
 
-      - name: Production build
-        run: bun run build
+      - name: Server production build
+        run: bun run build:server

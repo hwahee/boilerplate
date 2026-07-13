@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    // "bun" is here ONLY for the bun:test import in *.test.ts files — app
+    // code must not use Bun APIs (it runs on Hermes).
+    "types": ["bun"]
+  },
+  "include": ["index.ts", "app.config.ts", "src", "**/*.test.ts"],
+  "exclude": ["node_modules"]
+}

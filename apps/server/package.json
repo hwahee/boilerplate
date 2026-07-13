@@ -1,0 +1,19 @@
+{
+  "name": "@app/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "build": "bun run scripts/build.ts",
+    "start": "cd dist && bun index.js",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "bun run scripts/migrate.ts",
+    "db:seed": "bun run scripts/seed.ts",
+    "db:wait": "bun run scripts/wait-for-db.ts"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*"
+  }
+}

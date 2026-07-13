@@ -1,10 +1,12 @@
 # Local infrastructure.
 #
-#   docker compose up -d db          # Postgres only (bun run db:up)
-#   docker compose --profile redis up -d   # + Redis (for PUBSUB_DRIVER=redis)
-#   docker compose --profile app up --build  # containerized build of the app itself
+#   docker compose up -d db                  # Postgres only (bun run db:up)
+#   docker compose --profile redis up -d     # + Redis (for PUBSUB_DRIVER=redis)
+#   docker compose --profile app up --build  # containerized build of the API server
 #
-# Credentials come from .env (see .env.example) — never hardcode secrets here.
+# Credentials come from .env (see apps/server/.env.example) — never hardcode
+# secrets here. The mobile app is NOT built here; native builds run through
+# EAS Build (see .github/workflows/native-build.yml).
 services:
   db:
     image: postgres:16-alpine
@@ -30,7 +32,9 @@ services:
 
   app:
     profiles: [app]
-    build: .
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
     depends_on:
       db:
         condition: service_healthy

@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Tests run under `bun test`; production sources stay platform-pure
+    // (enforced by ESLint import restrictions, not by the type environment).
+    "types": ["bun"]
+  },
+  "include": ["src"]
+}

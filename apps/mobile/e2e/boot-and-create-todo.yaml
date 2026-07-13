@@ -1,0 +1,36 @@
+# Core flow: boot (past the ad slot) → create a todo → toggle → delete.
+# Run with: maestro test apps/mobile/e2e/boot-and-create-todo.yaml
+# (dev build installed on the device/emulator, local server running —
+#  see docs/ui-automation.md)
+appId: com.example.mobileboilerplate.dev
+---
+- launchApp
+# Boot screen appears, then either the ad slot (skippable per remote config)
+# or the main screen.
+- runFlow:
+    when:
+      visible:
+        id: 'boot.ad.skip'
+    commands:
+      - tapOn:
+          id: 'boot.ad.skip'
+- extendedWaitUntil:
+    visible:
+      id: 'todos.screen'
+    timeout: 15000
+
+# Create
+- tapOn:
+    id: 'todos.create.input'
+- inputText: 'Buy milk (e2e)'
+- tapOn:
+    id: 'todos.create.submit'
+- extendedWaitUntil:
+    visible:
+      text: 'Buy milk (e2e)'
+    timeout: 10000
+
+# Toggle the first visible item's checkbox (optimistic update)
+- tapOn:
+    text: 'Buy milk (e2e)'
+    optional: true

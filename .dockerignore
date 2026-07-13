@@ -1,10 +1,10 @@
 node_modules
-dist
+**/node_modules
+**/dist
+.git
+.expo
+apps/mobile/android
+apps/mobile/ios
 coverage
 .env
 .env.*
-!.env.example
-.git
-.github
-.husky
-*.md

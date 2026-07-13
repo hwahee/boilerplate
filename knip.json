@@ -1,6 +1,19 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": ["src/server/index.ts", "src/client/main.tsx", "src/**/*.test.{ts,tsx}", "scripts/*.ts"],
-  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.ts"],
+  "workspaces": {
+    "packages/shared": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "apps/server": {
+      "entry": ["src/index.ts", "src/**/*.test.ts", "scripts/*.ts"],
+      "project": ["src/**/*.ts", "scripts/**/*.ts"]
+    },
+    "apps/mobile": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["babel-preset-expo"]
+    }
+  },
   "ignoreBinaries": ["index.js"]
 }

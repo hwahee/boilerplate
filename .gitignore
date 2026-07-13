@@ -12,6 +12,22 @@ dist/
 # Test / coverage
 coverage/
 
+# Expo / React Native
+.expo/
+expo-env.d.ts
+apps/mobile/android/
+apps/mobile/ios/
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.cer
+*.certSigningRequest
+google-services.json
+GoogleService-Info.plist
+
 # Editor & OS
 .DS_Store
 *.log

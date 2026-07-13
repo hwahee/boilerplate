@@ -1,0 +1,66 @@
+name: Native Build (EAS)
+
+# Native binaries are built OFF the per-push CI path (they are slow and need
+# signing credentials). Two triggers:
+#   - manual (workflow_dispatch) with a profile choice
+#   - version tags (v1.2.3) → production profile
+#
+# Setup required before this workflow can actually build:
+#   1. `eas init` in apps/mobile (sets the EAS project), commit eas.json.
+#   2. Add the EXPO_TOKEN repository secret (Expo access token).
+#   3. Signing: keep EAS-managed credentials (recommended — nothing is ever
+#      committed; see docs/release-playbook.md "코드사이닝 자산 관리").
+# Until then the workflow fails fast at the guard step with instructions.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS build profile'
+        required: true
+        default: 'staging'
+        type: choice
+        options: [development, staging, production]
+      platform:
+        description: 'Platform'
+        required: true
+        default: 'all'
+        type: choice
+        options: [android, ios, all]
+  push:
+    tags: ['v*']
+
+jobs:
+  eas-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard — EXPO_TOKEN must be configured
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN secret is not set. Create an Expo access token and add it to the repository secrets (see the header of this workflow file)."
+            exit 1
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.11
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build
+        working-directory: apps/mobile
+        env:
+          # Tag pushes build production; manual runs use the chosen profile.
+          PROFILE: ${{ github.event_name == 'push' && 'production' || inputs.profile }}
+          PLATFORM: ${{ github.event_name == 'push' && 'all' || inputs.platform }}
+        run: eas build --non-interactive --no-wait --profile "$PROFILE" --platform "$PLATFORM"
