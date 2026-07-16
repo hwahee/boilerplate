@@ -57,6 +57,7 @@ export const en = {
   'designSystem.formFields': 'Form fields',
   'designSystem.feedback': 'Feedback',
   'designSystem.dataDisplay': 'Data display',
+  'designSystem.disclosure': 'Disclosure (accordion)',
 
   'notFound.title': 'Page not found',
   'notFound.goHome': 'Go to home',

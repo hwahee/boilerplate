@@ -6,8 +6,8 @@
 ## 원칙
 
 1. **모든 인터랙티브 컴포넌트는 `testId`가 필수 prop**입니다
-   (`Button`, `TextField`, `Select`, `Checkbox`). testId 없이 렌더링하면 타입 에러가 나므로
-   자동화 불가능한 컨트롤이 애초에 만들어질 수 없습니다.
+   (`Button`, `TextField`, `Select`, `Checkbox`, `Accordion`). testId 없이 렌더링하면 타입
+   에러가 나므로 자동화 불가능한 컨트롤이 애초에 만들어질 수 없습니다.
 2. **testid 문자열은 인라인으로 쓰지 않습니다.** 유일한 출처는
    [`src/client/testing/testids.ts`](../src/client/testing/testids.ts)의 `TESTID` 레지스트리입니다.
    테스트 코드도 같은 레지스트리를 import해서 selector 오타·드리프트를 없앱니다.
@@ -27,6 +27,7 @@
 | `aria-live="polite"` 페이지 표시    | 페이지네이션 상태 갱신                      |
 | `aria-current="page"` (nav 링크)    | 활성 라우트                                 |
 | `aria-invalid` + `aria-describedby` | 폼 필드 검증 오류                           |
+| `aria-expanded` (아코디언 trigger)  | 패널 열림/닫힘 (`Accordion`)                |
 
 ## 전역 상태 전환 (테마/디자인/언어)
 
@@ -55,6 +56,9 @@
 | NotFound      | `not-found.page`, `not-found.home-link`                                                 |
 
 `TextField`는 에러 표시 시 자동으로 `` `${testId}.error` `` 요소를 추가합니다.
+
+`Accordion`은 항목마다 `` `${testId}.trigger.<itemId>` ``와 `` `${testId}.panel.<itemId>` ``를
+자동 파생합니다. 열림/닫힘은 trigger의 `aria-expanded`로 관찰·대기하세요.
 
 ## Playwright 예시
 

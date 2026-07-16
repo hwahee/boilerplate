@@ -349,6 +349,115 @@ a {
   margin-top: 0;
 }
 
+/* ── Accordion ────────────────────────────────────────────────────────────── */
+/*
+ * Expand/collapse animates via the grid-template-rows 0fr→1fr technique: the
+ * panel transitions to its intrinsic height with no JS measurement. The
+ * animation itself is a CLS escape hatch — the layout shift becomes trackable
+ * motion instead of an instant jump — and it runs on --duration-expand, so
+ * skins keep authority (office zeroes it; reduced-motion disables it below).
+ * The remaining escape hatches (anchoring the clicked trigger, revealing the
+ * opened panel) live in ui/accordion.tsx.
+ */
+.accordion {
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--surface-shadow);
+  overflow: hidden;
+  /* The component compensates scroll itself (measured per frame, so it stays
+     convergent either way); opt this subtree out of native scroll anchoring
+     to avoid redundant corrections. */
+  overflow-anchor: none;
+}
+
+.accordion__item + .accordion__item {
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.accordion__header {
+  margin: 0;
+  font-size: var(--font-size-body);
+}
+
+.accordion__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--control-height);
+  padding: var(--space-3) var(--space-4);
+  font: inherit;
+  font-weight: 600;
+  text-align: start;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: background-color var(--duration-fast);
+}
+
+.accordion__trigger:hover {
+  background: var(--color-surface-raised);
+}
+
+/* The accordion clips overflow, so draw the focus ring inward instead of
+   letting the global outline-offset push it outside the clip box. */
+.accordion__trigger:focus-visible {
+  outline-offset: calc(var(--focus-ring-width) * -1);
+}
+
+/* State is shown by rotating the chevron — transform only, so the trigger's
+   box never changes size and the header row itself can't cause a shift. */
+.accordion__chevron {
+  flex-shrink: 0;
+  transition: transform var(--duration-fast) var(--ease-interaction);
+}
+
+.accordion__item[data-open] .accordion__chevron {
+  transform: rotate(180deg);
+}
+
+.accordion__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-expand) var(--ease-interaction);
+}
+
+.accordion__item[data-open] .accordion__panel {
+  grid-template-rows: 1fr;
+}
+
+/* Collapsed content must leave the accessibility tree and tab order, but only
+   after the closing animation finishes — hence the delayed visibility flip. */
+.accordion__panel-inner {
+  min-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition: visibility 0s var(--duration-expand);
+}
+
+.accordion__item[data-open] .accordion__panel-inner {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.accordion__content {
+  padding: var(--space-1) var(--space-4) var(--space-4);
+}
+
+/* Reduced motion: toggle instantly. The component detects the zeroed
+   transition and falls back to single-step scroll compensation. */
+@media (prefers-reduced-motion: reduce) {
+  .accordion__panel,
+  .accordion__panel-inner,
+  .accordion__chevron {
+    transition-duration: 0s;
+    transition-delay: 0s;
+  }
+}
+
 /* ── Todos page ───────────────────────────────────────────────────────────── */
 .todo-create {
   display: flex;
@@ -551,6 +660,22 @@ a {
   border-radius: 2px;
 }
 
+/* ── Accordion: task-pane header bars; toggling is instant (0s tokens) ─────*/
+[data-design='office'] .accordion__trigger {
+  background: linear-gradient(var(--office-btn-top), var(--office-btn-bottom));
+}
+
+[data-design='office'] .accordion__trigger:hover {
+  background: linear-gradient(
+    color-mix(in srgb, var(--office-btn-top), white 12%),
+    color-mix(in srgb, var(--office-btn-bottom), white 12%)
+  );
+}
+
+[data-design='office'] .accordion__item + .accordion__item {
+  border-top-color: var(--office-bevel-dark);
+}
+
 /* ============================================================================
  * KIDS SKIN — exaggerated, playful interactions.
  *
@@ -568,6 +693,10 @@ a {
 
 [data-design='kids'] .btn--ghost {
   box-shadow: none;
+}
+
+[data-design='kids'] .accordion__trigger {
+  font-weight: 800;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -627,6 +756,16 @@ a {
   /* Spin the loading spinner with an eager, bouncy cadence. */
   [data-design='kids'] .spinner {
     animation: spinner-rotate 0.55s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+  }
+
+  /* Accordion: panels spring open (overshoot easing + longer --duration-expand
+     from the kids tokens); the chevron does an eager bounce on hover. */
+  [data-design='kids'] .accordion__trigger:hover .accordion__chevron {
+    transform: translateY(3px) scale(1.2);
+  }
+
+  [data-design='kids'] .accordion__item[data-open] .accordion__trigger:hover .accordion__chevron {
+    transform: rotate(180deg) scale(1.2);
   }
 }
 
