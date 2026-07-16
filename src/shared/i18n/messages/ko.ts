@@ -53,6 +53,7 @@ export const ko: Record<MessageKey, string> = {
   'designSystem.formFields': '폼 필드',
   'designSystem.feedback': '피드백',
   'designSystem.dataDisplay': '데이터 표시',
+  'designSystem.disclosure': '디스클로저 (아코디언)',
 
   'notFound.title': '페이지를 찾을 수 없습니다',
   'notFound.goHome': '홈으로 이동',

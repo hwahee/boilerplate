@@ -9,6 +9,7 @@ import { useState } from 'react';
 
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
+import { Accordion } from '../ui/accordion';
 import { Alert } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -178,6 +179,63 @@ export function DesignSystemPage() {
             <p>Cards group related content on a surface token.</p>
           </Card>
         </div>
+      </Section>
+
+      <Section id="disclosure" title={t('designSystem.disclosure')}>
+        <Accordion
+          mode="single"
+          defaultOpenIds={['motion']}
+          testId="ds.accordion"
+          items={[
+            {
+              id: 'motion',
+              title: 'Escape hatch #0 — the shift is animated',
+              content: (
+                <p>
+                  Expanding inline content inevitably shifts everything below it. Instead of an
+                  instant jump, panels animate open on <code>--duration-expand</code> so the eye can
+                  track where content moved. Skins stay in charge: the office skin zeroes the token
+                  (instant, like the era), kids stretches it with a springy overshoot, and{' '}
+                  <code>prefers-reduced-motion</code> disables it entirely.
+                </p>
+              ),
+            },
+            {
+              id: 'anchor',
+              title: 'Escape hatch #1 — the clicked trigger stays put',
+              content: (
+                <>
+                  <p>
+                    In <code>single</code> mode, opening this item collapses the (possibly taller)
+                    item above it — without correction, this header would slide up and away from
+                    your pointer mid-click. The component records the trigger&apos;s viewport
+                    position and compensates the scroll frame-by-frame while layout settles, so the
+                    row you clicked never moves under your cursor.
+                  </p>
+                  <p>
+                    Try it: open the first item, scroll until both headers sit mid-viewport, then
+                    open this one. The header holds still while the panel above folds away.
+                  </p>
+                  <p>
+                    The correction measures the real delta each frame rather than predicting it, so
+                    it converges even when the browser&apos;s own scroll anchoring joins in.
+                  </p>
+                </>
+              ),
+            },
+            {
+              id: 'reveal',
+              title: 'Escape hatch #2 — opened content is revealed',
+              content: (
+                <p>
+                  If an opened panel ends up cut off by the bottom of the viewport, the page scrolls
+                  just enough to bring it into view — never so far that this header leaves the
+                  viewport. A shift the user asked for is guidance; a shift they didn&apos;t is CLS.
+                </p>
+              ),
+            },
+          ]}
+        />
       </Section>
     </section>
   );

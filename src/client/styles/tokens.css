@@ -29,6 +29,10 @@
   --radius-full: 999px;
 
   --duration-fast: 150ms;
+  /* Panel expand/collapse (accordion & co). Deliberately slower than
+     --duration-fast: animated reveal is a CLS escape hatch — the shift must be
+     slow enough for the eye to track where content moved. */
+  --duration-expand: 240ms;
 
   /* Motion knobs consumed by interaction rules. Neutral by default (designs A/B
      stay calm); the kids skin overrides these to exaggerate every interaction. */
@@ -106,6 +110,7 @@
 
   /* Restrained: state changes are instant — no easing, no motion. */
   --duration-fast: 0s;
+  --duration-expand: 0s;
 }
 
 /* ── Design "kids": playground/toy vibe — chunky, rounded, bouncy ──────────── */
@@ -134,6 +139,7 @@
 
   /* Exaggerated motion: overshoot spring + big scale/lift/tilt. */
   --duration-fast: 220ms;
+  --duration-expand: 380ms;
   --ease-interaction: cubic-bezier(0.34, 1.8, 0.5, 1); /* springy overshoot */
   --hover-scale: 1.08;
   --hover-lift: -4px;
