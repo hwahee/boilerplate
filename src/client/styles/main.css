@@ -458,6 +458,234 @@ a {
   }
 }
 
+/* ── Palette (color input) ────────────────────────────────────────────────── */
+/*
+ * The popup is a `popover="auto"` element, so it lives in the top layer: no
+ * z-index, no clipping by `overflow: hidden` ancestors, and no layout shift
+ * (which is why this component needs none of the accordion's escape hatches).
+ * Its top/left/max-height come from JS (ui/popover-position.ts) — the rules
+ * here only reset the UA's centered default so those coordinates apply.
+ */
+
+/* Alpha is first class, so every chip is drawn over a checkerboard. */
+.palette {
+  --palette-checker-size: 8px;
+  --palette-checker: repeating-conic-gradient(var(--color-text-muted) 0% 25%, transparent 0% 50%);
+}
+
+.palette__chip,
+.palette__swatch {
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(var(--palette-chip-color), var(--palette-chip-color)), var(--palette-checker);
+  background-size:
+    auto,
+    var(--palette-checker-size) var(--palette-checker-size);
+  border: var(--border-width) solid var(--color-border);
+  /* Windows high-contrast replaces backgrounds wholesale, which would make
+     every swatch identical. Selection is signalled by the check icon too. */
+  forced-color-adjust: none;
+}
+
+.palette__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-height);
+  padding-inline: var(--control-padding-x);
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition: background-color var(--duration-fast);
+}
+
+.palette__trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.palette__trigger:not(:disabled):hover {
+  background: var(--color-surface-raised);
+}
+
+.palette__chip {
+  width: 1.25em;
+  height: 1.25em;
+  border-radius: calc(var(--radius-control) / 2);
+  flex: none;
+}
+
+.palette__trigger-text {
+  flex: 1;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.palette__chevron {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.palette__popup {
+  position: fixed;
+  inset: auto; /* JS sets top/left; without this the UA centers the popup */
+  margin: 0;
+  padding: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow: auto;
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--surface-shadow);
+}
+
+/* `display` belongs to the open state only. Setting it on the base rule would
+   beat the UA's `[popover] { display: none }` and leave a closed popup sitting
+   in the layout at opacity 0 — invisible, but still catching pointer events. */
+.palette__popup:popover-open {
+  display: flex;
+}
+
+/* Discrete properties need `allow-discrete` to participate in a transition;
+   `@starting-style` supplies the pre-open value. Duration comes from the skin
+   token, so office (0s) opens instantly and kids springs. */
+@media (prefers-reduced-motion: no-preference) {
+  .palette__popup {
+    opacity: 1;
+    transition:
+      opacity var(--duration-fast) var(--ease-interaction),
+      transform var(--duration-fast) var(--ease-interaction),
+      overlay var(--duration-fast) allow-discrete,
+      display var(--duration-fast) allow-discrete;
+  }
+
+  .palette__popup:not(:popover-open) {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  @starting-style {
+    .palette__popup:popover-open {
+      opacity: 0;
+      transform: scale(0.98);
+    }
+  }
+}
+
+.palette__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.palette__grid {
+  display: grid;
+  grid-template-columns: repeat(var(--palette-columns), auto);
+  gap: var(--space-2);
+  justify-content: start;
+}
+
+.palette__group-label {
+  grid-column: 1 / -1;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.palette__swatch {
+  width: calc(var(--control-height) * 0.75);
+  height: calc(var(--control-height) * 0.75);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: calc(var(--radius-control) / 1.5);
+  cursor: pointer;
+  transition:
+    transform var(--duration-fast) var(--ease-interaction),
+    box-shadow var(--duration-fast) var(--ease-interaction);
+}
+
+.palette__swatch[aria-selected='true'] {
+  box-shadow:
+    0 0 0 2px var(--color-surface-raised),
+    0 0 0 4px var(--color-focus);
+}
+
+/* The check has to survive on a white swatch and on a black one; the component
+   picks the higher-contrast ink per swatch (see contrastRatio in palette.tsx). */
+.palette__swatch[data-ink='light'] .palette__check {
+  color: #ffffff;
+}
+
+.palette__swatch[data-ink='dark'] .palette__check {
+  color: #000000;
+}
+
+.palette__custom {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.palette__custom .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.palette__native {
+  flex: none;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: var(--space-1);
+  background: var(--color-surface);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.palette__warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+}
+
+/* Positioned by JS in viewport coordinates. It sits outside the popup's
+   scroll box on purpose — inside, `overflow: auto` would clip it at the
+   edges of the swatch grid, which is exactly where tooltips are needed. */
+.palette__tooltip {
+  position: fixed;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--color-surface);
+  background: var(--color-text);
+  border-radius: var(--radius-sm);
+}
+
+.palette__tooltip-value {
+  background: none;
+  padding: 0;
+  color: inherit;
+  opacity: 0.75;
+}
+
 /* ── Todos page ───────────────────────────────────────────────────────────── */
 .todo-create {
   display: flex;
@@ -543,6 +771,14 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: var(--space-4);
   align-items: start;
+}
+
+/* Fixed white so the palette's contrast warning has a real reference. */
+.ds-color-sample {
+  padding: var(--space-2) var(--space-3);
+  background: #ffffff;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-control);
 }
 
 .swatch-grid {
@@ -676,6 +912,52 @@ a {
   border-top-color: var(--office-bevel-dark);
 }
 
+/* ── Palette: sunken combo control + flat dropdown; the tooltip is the
+      unmistakable pale-yellow one of the era. Motion is 0s from the tokens. ─*/
+[data-design='office'] .palette__trigger,
+[data-design='office'] .palette__native {
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--office-bevel-dark) var(--office-bevel-light) var(--office-bevel-light)
+    var(--office-bevel-dark);
+  border-radius: 1px;
+}
+
+[data-design='office'] .palette__popup {
+  padding: 2px;
+  gap: 2px;
+  border-color: var(--office-bevel-light) var(--office-bevel-dark) var(--office-bevel-dark)
+    var(--office-bevel-light);
+  background: var(--color-surface-raised);
+}
+
+[data-design='office'] .palette__groups,
+[data-design='office'] .palette__custom {
+  padding: var(--space-2);
+}
+
+[data-design='office'] .palette__grid {
+  gap: 2px; /* dense, like the Office color grid */
+}
+
+[data-design='office'] .palette__swatch {
+  border-radius: 0;
+  border-color: var(--color-border);
+}
+
+[data-design='office'] .palette__swatch[aria-selected='true'] {
+  box-shadow: none;
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+[data-design='office'] .palette__tooltip {
+  color: #000000;
+  background: #ffffe1;
+  border: 1px solid #000000;
+  border-radius: 0;
+}
+
 /* ============================================================================
  * KIDS SKIN — exaggerated, playful interactions.
  *
@@ -699,6 +981,21 @@ a {
   font-weight: 800;
 }
 
+/* Palette: fat round candy buttons with the same sticker shadow as .btn. */
+[data-design='kids'] .palette__trigger {
+  font-weight: 800;
+  box-shadow: 0 5px 0 rgb(0 0 0 / 18%);
+}
+
+[data-design='kids'] .palette__swatch {
+  border-radius: var(--radius-full);
+}
+
+[data-design='kids'] .palette__tooltip {
+  font-weight: 700;
+  border-radius: var(--radius-full);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   /* Broaden the transition to include transform/box-shadow and swap in the
      springy easing so every state change overshoots and settles. */
@@ -708,6 +1005,8 @@ a {
   [data-design='kids'] .todo-item,
   [data-design='kids'] .card,
   [data-design='kids'] .badge,
+  [data-design='kids'] .palette__trigger,
+  [data-design='kids'] .palette__swatch,
   [data-design='kids'] .checkbox__input {
     transition:
       transform var(--duration-fast) var(--ease-interaction),
@@ -726,6 +1025,17 @@ a {
   [data-design='kids'] .btn:not(:disabled):active {
     transform: translateY(2px) scale(var(--press-scale));
     box-shadow: 0 1px 0 rgb(0 0 0 / 18%);
+  }
+
+  /* Swatches pop out of the grid when hovered or arrowed onto. */
+  [data-design='kids'] .palette__swatch:hover,
+  [data-design='kids'] .palette__swatch:focus-visible {
+    transform: scale(1.25) rotate(var(--hover-rotate));
+  }
+
+  [data-design='kids'] .palette__trigger:not(:disabled):hover {
+    transform: translateY(var(--hover-lift)) scale(var(--hover-scale)) rotate(var(--hover-rotate));
+    box-shadow: 0 9px 0 rgb(0 0 0 / 18%);
   }
 
   /* Nav links do a happy wiggle. */

@@ -44,6 +44,12 @@ export const ko: Record<MessageKey, string> = {
   'todos.loadFailed': '할 일 목록을 불러오지 못했습니다.',
   'todos.total': '총 {count}개',
 
+  'palette.recent': '최근 사용',
+  'palette.hexLabel': 'HEX 값',
+  'palette.hexInvalid': '#5b5bd6 또는 #5b5bd680 형식으로 입력하세요.',
+  'palette.customColor': '더 많은 색 (시스템 피커)',
+  'palette.contrastWarning': '대비 {ratio}:1 — 최소 권장 {minimum}:1 미만입니다.',
+
   'designSystem.title': '디자인 시스템',
   'designSystem.description':
     '모든 토큰과 컴포넌트를 한곳에서 확인합니다. 헤더의 컨트롤로 테마(라이트/다크), 디자인(A / B / 오피스 / 어린이), 언어를 전환해 보세요.',
@@ -54,6 +60,7 @@ export const ko: Record<MessageKey, string> = {
   'designSystem.feedback': '피드백',
   'designSystem.dataDisplay': '데이터 표시',
   'designSystem.disclosure': '디스클로저 (아코디언)',
+  'designSystem.colorInput': '색상 입력 (팔레트)',
 
   'notFound.title': '페이지를 찾을 수 없습니다',
   'notFound.goHome': '홈으로 이동',

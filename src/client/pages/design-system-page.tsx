@@ -4,6 +4,7 @@
  * (A = aesthetic / B = high-visibility) and language live on this page,
  * because everything below renders exclusively from semantic CSS tokens.
  */
+import { hexColor, type HexColor } from '@shared/color';
 import { Image as ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 
@@ -15,6 +16,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Checkbox } from '../ui/checkbox';
+import { Palette, type PaletteSwatch } from '../ui/palette';
 import { Select } from '../ui/select';
 import { Spinner } from '../ui/spinner';
 import { TextField } from '../ui/text-field';
@@ -54,10 +56,26 @@ function Section({
   );
 }
 
+/** The palette's contrast check needs a concrete background; the sample below sits on white. */
+const SAMPLE_BACKGROUND = hexColor('#ffffff');
+
 export function DesignSystemPage() {
   const { t } = useI18n();
   const [checked, setChecked] = useState(true);
   const [selectValue, setSelectValue] = useState<'one' | 'two'>('one');
+  const [brandColor, setBrandColor] = useState<HexColor>(() => hexColor('#6366f1'));
+  // Recent colors live here, not in the component — see docs/palette-design.md §5.3.
+  const [recentColors, setRecentColors] = useState<readonly PaletteSwatch[]>([]);
+
+  const pickColor = (next: HexColor) => {
+    setBrandColor(next);
+    setRecentColors((previous) =>
+      [{ value: next, name: next }, ...previous.filter((swatch) => swatch.value !== next)].slice(
+        0,
+        8,
+      ),
+    );
+  };
 
   return (
     <section data-testid={TESTID.designSystem.page} aria-labelledby="ds-heading">
@@ -137,6 +155,27 @@ export function DesignSystemPage() {
           />
           <Checkbox label="Checkbox" checked={checked} onChange={setChecked} testId="ds.checkbox" />
         </div>
+      </Section>
+
+      <Section id="color-input" title={t('designSystem.colorInput')}>
+        <div className="ds-row">
+          <Palette
+            label="Brand color"
+            value={brandColor}
+            onChange={pickColor}
+            recent={recentColors}
+            contrastAgainst={SAMPLE_BACKGROUND}
+            testId="ds.palette"
+          />
+          <span className="ds-color-sample" style={{ color: brandColor }}>
+            Sample text on white — {brandColor}
+          </span>
+        </div>
+        <p className="muted">
+          Presets, a hex field and the system picker (with an opacity slider — alpha is part of the
+          value). Hovering or arrowing onto a swatch shows the exact string it will return. The
+          popup opens in the top layer, so it is never clipped and shifts no layout.
+        </p>
       </Section>
 
       <Section id="feedback" title={t('designSystem.feedback')}>
