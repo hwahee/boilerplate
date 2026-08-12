@@ -48,6 +48,12 @@ export const en = {
   'todos.loadFailed': 'Could not load todos.',
   'todos.total': '{count} items in total',
 
+  'palette.recent': 'Recently used',
+  'palette.hexLabel': 'Hex value',
+  'palette.hexInvalid': 'Use a color like #5b5bd6 or #5b5bd680.',
+  'palette.customColor': 'More colors (system picker)',
+  'palette.contrastWarning': 'Contrast {ratio}:1 — below the {minimum}:1 minimum.',
+
   'designSystem.title': 'Design System',
   'designSystem.description':
     'Every token and component in one place. Use the header controls to toggle theme (light/dark), design variant (A / B / Office / Kids) and language.',
@@ -58,6 +64,7 @@ export const en = {
   'designSystem.feedback': 'Feedback',
   'designSystem.dataDisplay': 'Data display',
   'designSystem.disclosure': 'Disclosure (accordion)',
+  'designSystem.colorInput': 'Color input (palette)',
 
   'notFound.title': 'Page not found',
   'notFound.goHome': 'Go to home',

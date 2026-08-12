@@ -6,7 +6,7 @@
 ## 원칙
 
 1. **모든 인터랙티브 컴포넌트는 `testId`가 필수 prop**입니다
-   (`Button`, `TextField`, `Select`, `Checkbox`, `Accordion`). testId 없이 렌더링하면 타입
+   (`Button`, `TextField`, `Select`, `Checkbox`, `Accordion`, `Palette`). testId 없이 렌더링하면 타입
    에러가 나므로 자동화 불가능한 컨트롤이 애초에 만들어질 수 없습니다.
 2. **testid 문자열은 인라인으로 쓰지 않습니다.** 유일한 출처는
    [`src/client/testing/testids.ts`](../src/client/testing/testids.ts)의 `TESTID` 레지스트리입니다.
@@ -28,6 +28,8 @@
 | `aria-current="page"` (nav 링크)    | 활성 라우트                                 |
 | `aria-invalid` + `aria-describedby` | 폼 필드 검증 오류                           |
 | `aria-expanded` (아코디언 trigger)  | 패널 열림/닫힘 (`Accordion`)                |
+| `aria-expanded` (팔레트 trigger)    | 팔레트 팝업 열림/닫힘 (`Palette`)           |
+| `aria-selected` (팔레트 스와치)     | 현재 선택된 색                              |
 
 ## 전역 상태 전환 (테마/디자인/언어)
 
@@ -59,6 +61,20 @@
 
 `Accordion`은 항목마다 `` `${testId}.trigger.<itemId>` ``와 `` `${testId}.panel.<itemId>` ``를
 자동 파생합니다. 열림/닫힘은 trigger의 `aria-expanded`로 관찰·대기하세요.
+
+`Palette`는 `` `${testId}.popup` ``, `` `${testId}.swatch.<hex>` ``(`#` 없는 hex),
+`` `${testId}.hex` ``(+ `.hex.error`), `` `${testId}.native` ``, `` `${testId}.contrast` ``를
+파생합니다. 팝업은 top layer(`popover`)에 뜨므로 DOM 위치가 아니라 testid나
+`role="dialog"`로 잡으세요. 선택 대기는 스와치의 `aria-selected`로 합니다.
+
+```ts
+test('picks a preset color', async ({ page }) => {
+  await page.goto('/design-system');
+  await page.getByTestId('ds.palette').click();
+  await page.getByTestId('ds.palette.swatch.ef4444').click();
+  await expect(page.getByTestId('ds.palette')).toHaveAttribute('aria-expanded', 'false');
+});
+```
 
 ## Playwright 예시
 
