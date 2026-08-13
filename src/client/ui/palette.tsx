@@ -1,5 +1,5 @@
 import { Check, ChevronDown, TriangleAlert } from 'lucide-react';
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, KeyboardEvent, ToggleEvent } from 'react';
 
 import { contrastRatio, hexColor, parseHexColor, type HexColor } from '@shared/color';
@@ -190,33 +190,42 @@ export function Palette({
 
   const contrast = contrastAgainst ? contrastRatio(value, contrastAgainst) : null;
 
-  // Position before the browser paints, so the popup never flashes at the UA
-  // default (viewport-centered) position on the way to its anchor.
-  useLayoutEffect(() => {
-    if (!open) return;
+  /**
+   * Anchors the popup and marks it placed, which is what makes it paintable
+   * (see the `[data-placed]` gate in main.css).
+   *
+   * Only refs are read, so this stays stable across renders and can be called
+   * from the toggle handler as well as from the scroll/resize listeners.
+   */
+  const placePopup = useCallback(() => {
     const popup = popupRef.current;
     const trigger = triggerRef.current;
     if (!popup || !trigger) return;
 
+    popup.style.maxHeight = ''; // measure the natural height, not last open's cap
+    const placement = placePopover(
+      rectOf(trigger),
+      { width: popup.offsetWidth, height: popup.offsetHeight },
+      viewportSize(),
+    );
+    popup.style.top = `${placement.top}px`;
+    popup.style.left = `${placement.left}px`;
+    popup.style.maxHeight = `${placement.maxHeight}px`;
+    popup.dataset.side = placement.side;
+    popup.dataset.placed = 'true';
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
     let frame = 0;
-    const reposition = () => {
-      frame = 0;
-      popup.style.maxHeight = ''; // measure the natural height, not last open's cap
-      const placement = placePopover(
-        rectOf(trigger),
-        { width: popup.offsetWidth, height: popup.offsetHeight },
-        viewportSize(),
-      );
-      popup.style.top = `${placement.top}px`;
-      popup.style.left = `${placement.left}px`;
-      popup.style.maxHeight = `${placement.maxHeight}px`;
-      popup.dataset.side = placement.side;
-    };
     const schedule = () => {
-      frame ||= requestAnimationFrame(reposition);
+      frame ||= requestAnimationFrame(() => {
+        frame = 0;
+        placePopup();
+      });
     };
 
-    reposition();
     // Capture phase: the trigger may live inside a scroll container, whose
     // scroll events never reach window in the bubble phase.
     window.addEventListener('scroll', schedule, true);
@@ -226,7 +235,7 @@ export function Palette({
       window.removeEventListener('scroll', schedule, true);
       window.removeEventListener('resize', schedule);
     };
-  }, [open]);
+  }, [open, placePopup]);
 
   // The tooltip is a single element positioned outside the popup's scroll box:
   // rendered per-swatch it would be clipped by `overflow: auto` at the grid edges.
@@ -289,10 +298,24 @@ export function Palette({
     const opened = event.newState === 'open';
     setOpen(opened);
     setTooltip(null);
-    if (!opened) return;
+
+    if (!opened) {
+      // Re-arm the paint gate so the next open cannot show stale coordinates.
+      delete popupRef.current?.dataset.placed;
+      return;
+    }
+
+    // Place it here rather than in an effect. The browser has already shown
+    // the popup by the time this event fires, so it is measurable now — and
+    // anything that waits for a React render risks being a frame late, which
+    // is a frame of popup drawn at the wrong place.
+    placePopup();
+
     setHexDraft(null);
     setHexError(undefined);
     // Land on the current color so arrow keys start from something meaningful.
+    // Must come after placePopup: the gate makes the popup `visibility: hidden`
+    // until then, and hidden elements cannot take focus.
     const index = selectedIndex >= 0 ? selectedIndex : 0;
     setActiveIndex(index);
     optionRefs.current.get(index)?.focus();

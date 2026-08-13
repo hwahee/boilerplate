@@ -553,6 +553,24 @@ a {
   display: flex;
 }
 
+/*
+ * Do not paint the popup until JS has anchored it (`data-placed`).
+ *
+ * The browser shows a popover as the click's default action but dispatches
+ * `toggle` in a separately queued task, so there is a window where the popup
+ * is in the top layer with no coordinates yet. `inset: auto` gives a top-layer
+ * element no static position to fall back on, so in that window it renders at
+ * the viewport's top-left corner — a visible flash on the first open of the
+ * page, most obvious in skins whose open transition is instant (office) or
+ * absent (prefers-reduced-motion). JS cannot close that window; this can.
+ *
+ * Scoped to `:popover-open` so removing the flag on close does not cut the
+ * exit animation short.
+ */
+.palette__popup:popover-open:not([data-placed]) {
+  visibility: hidden;
+}
+
 /* Discrete properties need `allow-discrete` to participate in a transition;
    `@starting-style` supplies the pre-open value. Duration comes from the skin
    token, so office (0s) opens instantly and kids springs. */
