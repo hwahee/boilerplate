@@ -66,6 +66,9 @@
   --border-width: 1px;
   --focus-ring-width: 2px;
   --surface-shadow: 0 1px 3px rgb(0 0 0 / 8%);
+
+  /* Weight of an inline field's underline (src/client/ui/inline-field.tsx). */
+  --inline-field-rule: 2px;
 }
 
 /* ── Design B: visibility-first — bigger type, thick borders, high contrast ─ */
@@ -85,6 +88,7 @@
   --border-width: 2px;
   --focus-ring-width: 4px;
   --surface-shadow: none;
+  --inline-field-rule: 3px;
 }
 
 /* ── Design "office": 2000s–2010s MS Office — dense, beveled, businesslike ─── */
@@ -111,6 +115,7 @@
   /* Restrained: state changes are instant — no easing, no motion. */
   --duration-fast: 0s;
   --duration-expand: 0s;
+  --inline-field-rule: 1px;
 }
 
 /* ── Design "kids": playground/toy vibe — chunky, rounded, bouncy ──────────── */
@@ -146,6 +151,7 @@
   --hover-rotate: -2.5deg;
   --press-scale: 0.9;
   --focus-scale: 1.04;
+  --inline-field-rule: 4px;
 }
 
 /* ── Semantic colors: design A ────────────────────────────────────────────── */

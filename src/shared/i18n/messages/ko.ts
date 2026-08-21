@@ -60,6 +60,7 @@ export const ko: Record<MessageKey, string> = {
   'designSystem.feedback': '피드백',
   'designSystem.dataDisplay': '데이터 표시',
   'designSystem.disclosure': '디스클로저 (아코디언)',
+  'designSystem.inlineField': '인라인 필드 (Mad Libs 빈칸)',
   'designSystem.colorInput': '색상 입력 (팔레트)',
 
   'notFound.title': '페이지를 찾을 수 없습니다',
