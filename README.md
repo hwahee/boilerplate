@@ -30,15 +30,18 @@ src/
 
 ## 요구 사항
 
-| 런타임 | 버전        | 명시 위치                                                       |
-| ------ | ----------- | --------------------------------------------------------------- |
-| Bun    | **1.4.0**   | `.bun-version`, `package.json`(`packageManager`, `engines.bun`) |
-| Node   | **24.19.0** | `.nvmrc`, `package.json`(`engines.node`)                        |
+| 런타임 | 버전        |
+| ------ | ----------- |
+| Bun    | **1.4.0**   |
+| Node   | **24.19.0** |
 
-애플리케이션은 Bun 런타임으로 실행·빌드·테스트합니다. Node는 Bun 외부에서 도는 에디터
-플러그인·툴링(예: ESLint/TypeScript 언어 서버)이 사용하는 런타임이라 함께 고정합니다.
-`nvm use`(또는 fnm/asdf)와 `bun upgrade --to 1.4.0`으로 로컬 버전을 맞출 수 있고,
-CI(`.github/workflows/ci.yml`)와 Docker 이미지(`oven/bun:1.4.0`)도 동일한 버전을 씁니다.
+버전은 `package.json` 한 곳에만 적혀 있습니다 — `packageManager`(`bun@1.4.0`)와
+`engines`(`bun`/`node`). CI는 이 필드를 그대로 읽고(`setup-bun`은 `packageManager`,
+`setup-node`는 `engines.node`), Docker 이미지도 같은 버전(`oven/bun:1.4.0`)을 씁니다.
+버전을 올릴 때는 `package.json`과 `Dockerfile`만 고치면 됩니다.
+
+애플리케이션은 Bun으로 실행·빌드·테스트합니다. Node는 Bun 밖에서 도는 에디터
+플러그인·툴링(ESLint/TypeScript 언어 서버 등)이 쓰는 런타임이라 함께 고정합니다.
 
 ## 시작하기
 
