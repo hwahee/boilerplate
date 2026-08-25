@@ -22,6 +22,12 @@ export const TESTID = {
       user: 'app.account.user',
       signOut: 'app.account.sign-out',
     },
+    footer: 'app.footer',
+    /** The <ul> of services rendered from /sitemap.json (absent while loading). */
+    footerServices: 'app.footer.services',
+    footerGithub: 'app.footer.github',
+    footerCopyright: 'app.footer.copyright',
+    footerLegal: 'app.footer.legal',
   },
   todos: {
     page: 'todos.page',
