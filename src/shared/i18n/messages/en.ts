@@ -28,6 +28,13 @@ export const en = {
   'common.design.kids': 'Kids skin (playground)',
   'common.language': 'Language',
 
+  'footer.otherServices': 'Other Services',
+  'footer.connect': 'Connect',
+  'footer.github': 'GitHub',
+  'footer.terms': 'Terms of Service',
+  'footer.privacy': 'Privacy Policy',
+  'footer.copyright': '© {year} {site}',
+
   'todos.title': 'Todos',
   'todos.description': 'A small demo domain exercising the full stack.',
   'todos.createLabel': 'New todo title',

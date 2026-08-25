@@ -24,6 +24,13 @@ export const ko: Record<MessageKey, string> = {
   'common.design.kids': '어린이 스킨 (놀이터)',
   'common.language': '언어',
 
+  'footer.otherServices': '관련 서비스',
+  'footer.connect': '연결',
+  'footer.github': 'GitHub',
+  'footer.terms': '이용약관',
+  'footer.privacy': '개인정보처리방침',
+  'footer.copyright': '© {year} {site}',
+
   'todos.title': '할 일',
   'todos.description': '풀스택 전체를 관통하는 작은 데모 도메인입니다.',
   'todos.createLabel': '새 할 일 제목',

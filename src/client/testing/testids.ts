@@ -17,6 +17,12 @@ export const TESTID = {
     themeToggle: 'app.controls.theme-toggle',
     designToggle: 'app.controls.design-toggle',
     localeSelect: 'app.controls.locale-select',
+    footer: 'app.footer',
+    /** The <ul> of services rendered from /sitemap.json (absent while loading). */
+    footerServices: 'app.footer.services',
+    footerGithub: 'app.footer.github',
+    footerCopyright: 'app.footer.copyright',
+    footerLegal: 'app.footer.legal',
   },
   todos: {
     page: 'todos.page',

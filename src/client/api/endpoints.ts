@@ -16,6 +16,7 @@
  * ./queries.ts), never call `fetch` directly.
  */
 import type { Page } from '@shared/api/pagination';
+import type { Sitemap } from '@shared/domain/sitemap';
 import type { CreateTodoInput, Todo, TodoListQuery, UpdateTodoInput } from '@shared/domain/todo';
 
 import { apiFetch } from './http';
@@ -79,5 +80,21 @@ export const todosApi = {
    */
   remove(id: string): Promise<void> {
     return apiFetch(`/api/todos/${id}`, { method: 'DELETE' });
+  },
+};
+
+export const sitemapApi = {
+  /**
+   * `GET /sitemap.json`
+   *
+   * The service directory rendered by the footer's "Other Services" column.
+   * Served straight from `public/sitemap.json`, so the list changes with a
+   * data edit — no client code involved.
+   * - Errors: 404 `NOT_FOUND` when the file is absent (the footer then just
+   *   renders without that column).
+   * - Returns: `Sitemap` — `{ services: [{ name, url, description? }] }`
+   */
+  get(): Promise<Sitemap> {
+    return apiFetch('/sitemap.json');
   },
 };

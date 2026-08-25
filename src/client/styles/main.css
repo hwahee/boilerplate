@@ -144,6 +144,94 @@ a {
   padding-top: var(--space-5);
 }
 
+/* ── Footer (hybrid: column block + one minimal bottom line) ──────────────── */
+/* Tone: one step quieter than the body — small type, muted color, links that
+   only underline on hover. It sizes with --font-size-sm rather than a hard
+   12–13px so the high-visibility and skin designs keep their own scale
+   (13px in design A, the default). */
+.app-footer {
+  margin-top: var(--space-7);
+  padding-top: var(--space-5);
+  border-top: var(--border-width) solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.app-footer__columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-5);
+}
+
+.app-footer__column {
+  min-width: 0;
+}
+
+.app-footer__brand {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.app-footer__tagline {
+  margin: var(--space-1) 0 0;
+}
+
+.app-footer__heading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.app-footer__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* Links inherit the footer's muted color instead of the primary accent —
+   restraint is the point; hover adds an underline and nothing else. */
+.app-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+.app-footer__link-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.app-footer__icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+/* The bottom line is set apart by spacing alone — a second rule here would
+   fight the single divider that separates the whole footer from the body. */
+.app-footer__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.app-footer__legal {
+  display: flex;
+  gap: var(--space-4);
+}
+
 /* ── Button ───────────────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;

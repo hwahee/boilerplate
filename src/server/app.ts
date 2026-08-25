@@ -7,6 +7,7 @@
 import type { Container } from './container';
 import type { HttpDeps } from './http/respond';
 import { livenessRoute, readinessRoute, type AppState } from './routes/health';
+import { sitemapRoute } from './routes/sitemap';
 import { todoCollectionRoutes, todoItemRoutes } from './routes/todos';
 
 /** Server-side WebSocket topic that todo change events are published to. */
@@ -21,6 +22,12 @@ export function buildApp(container: Container, state: AppState) {
       '/api/health/ready': readinessRoute(container, state),
       '/api/todos': todoCollectionRoutes(container, deps),
       '/api/todos/:id': todoItemRoutes(container, deps),
+      /**
+       * Public service directory (NOT the crawler's sitemap.xml). Lives
+       * outside /api because it is a static, cacheable document rather than
+       * part of the application API.
+       */
+      '/sitemap.json': sitemapRoute(deps),
       /** WebSocket endpoint: pushes `{action, todoId}` on every todo change. */
       '/ws': (req: Bun.BunRequest<'/ws'>, server: Bun.Server<undefined>) =>
         server.upgrade(req)

@@ -1,6 +1,7 @@
 /**
  * App shell: providers (query cache, theme, locale), router, and the layout
- * with the global controls (theme / design-variant / language switching).
+ * with the global controls (theme / design-variant / language switching) plus
+ * the shared footer.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Moon, Palette, Sun } from 'lucide-react';
@@ -15,6 +16,7 @@ import { TodosPage } from './pages/todos-page';
 import { TESTID } from './testing/testids';
 import { nextDesign, ThemeProvider, useTheme, type Design } from './theme/theme-context';
 import { Button } from './ui/button';
+import { Footer } from './ui/footer';
 import { Select } from './ui/select';
 
 const queryClient = new QueryClient({
@@ -105,6 +107,7 @@ function Shell() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
+      <Footer />
     </div>
   );
 }
