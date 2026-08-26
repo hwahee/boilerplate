@@ -1,23 +1,19 @@
 /**
  * App shell: providers (query cache, theme, locale), router, and the layout
- * with the global controls (theme / design-variant / language switching) plus
- * the shared footer, which routes can opt out of one group at a time.
+ * with the shared footer, which routes can opt out of one group at a time.
+ * The global preference switches (theme / design variant / language) live in
+ * the footer — see ./ui/app-controls.tsx.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Moon, Palette, Sun } from 'lucide-react';
 import { BrowserRouter, NavLink, Outlet, Route, Routes } from 'react-router';
-
-import { SUPPORTED_LOCALES, type Locale } from '@shared/i18n';
 
 import { LocaleProvider, useI18n } from './i18n/locale-context';
 import { DesignSystemPage } from './pages/design-system-page';
 import { NotFoundPage } from './pages/not-found-page';
 import { TodosPage } from './pages/todos-page';
 import { TESTID } from './testing/testids';
-import { nextDesign, ThemeProvider, useTheme, type Design } from './theme/theme-context';
-import { Button } from './ui/button';
+import { ThemeProvider } from './theme/theme-context';
 import { Footer } from './ui/footer';
-import { Select } from './ui/select';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,21 +24,8 @@ const queryClient = new QueryClient({
   },
 });
 
-const LOCALE_LABELS: Record<Locale, string> = { en: 'English', ko: '한국어' };
-
-/** Short label shown on the design toggle button. */
-const DESIGN_BADGES: Record<Design, string> = { a: 'A', b: 'B', office: 'Office', kids: 'Kids' };
-/** i18n key describing each design, for the toggle's aria-label. */
-const DESIGN_LABEL_KEYS = {
-  a: 'common.design.a',
-  b: 'common.design.b',
-  office: 'common.design.office',
-  kids: 'common.design.kids',
-} as const;
-
 function Header() {
-  const { t, locale, setLocale } = useI18n();
-  const { theme, design, toggleTheme, toggleDesign } = useTheme();
+  const { t } = useI18n();
 
   return (
     <header className="app-header" data-testid={TESTID.app.header}>
@@ -60,34 +43,6 @@ function Header() {
           {t('nav.designSystem')}
         </NavLink>
       </nav>
-
-      <div className="app-controls">
-        <Button
-          variant="ghost"
-          onClick={toggleTheme}
-          aria-label={theme === 'light' ? t('common.theme.dark') : t('common.theme.light')}
-          testId={TESTID.app.themeToggle}
-        >
-          {theme === 'light' ? <Moon aria-hidden size="1em" /> : <Sun aria-hidden size="1em" />}
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={toggleDesign}
-          aria-label={t(DESIGN_LABEL_KEYS[nextDesign(design)])}
-          testId={TESTID.app.designToggle}
-        >
-          <Palette aria-hidden size="1em" />
-          {DESIGN_BADGES[design]}
-        </Button>
-        <Select<Locale>
-          label={t('common.language')}
-          hideLabel
-          value={locale}
-          options={SUPPORTED_LOCALES.map((code) => ({ value: code, label: LOCALE_LABELS[code] }))}
-          onChange={setLocale}
-          testId={TESTID.app.localeSelect}
-        />
-      </div>
     </header>
   );
 }

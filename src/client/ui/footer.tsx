@@ -9,11 +9,14 @@
  * or if it fails — the column heading stays and the list is simply omitted:
  * chrome below the fold should never show a spinner or an error banner.
  */
+import { useLocation } from 'react-router';
+
 import type { MessageKey } from '@shared/i18n';
 
 import { useSitemap } from '../api/queries';
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
+import { AppControls } from './app-controls';
 
 /** The domain every service on this footer belongs to. */
 const SITE_NAME = 'hwahee.com';
@@ -41,17 +44,48 @@ function GithubMark() {
   );
 }
 
+/** Where the preference switches sit within the footer. */
+type ControlsSlot = 'brand' | 'column' | 'bottom';
+
+/**
+ * TEMPORARY — design review only. `?footer=1..4` swaps in one of the layout
+ * candidates defined in main.css; each pairs a way of separating the brand
+ * block from the link columns with a home for the preference switches.
+ * Delete this hook, `CONTROLS_SLOT`, and the `--v*` rules once one is chosen.
+ */
+const CONTROLS_SLOT: Record<string, ControlsSlot> = {
+  '': 'bottom',
+  v1: 'brand', // brand row, right end
+  v2: 'column', // a fourth column of its own
+  v3: 'bottom', // utility line, between copyright and legal
+  v4: 'brand', // stacked under the brand text
+};
+
+function useFooterVariant(): string {
+  const { search } = useLocation();
+  const variant = new URLSearchParams(search).get('footer');
+  return variant && /^[1-4]$/.test(variant) ? `v${variant}` : '';
+}
+
 export function Footer() {
   const { t } = useI18n();
   const { data: sitemap } = useSitemap();
   const services = sitemap?.services ?? [];
+  const variant = useFooterVariant();
+  const slot = CONTROLS_SLOT[variant] ?? 'bottom';
 
   return (
-    <footer className="app-footer" data-testid={TESTID.app.footer}>
+    <footer
+      className={`app-footer${variant ? ` app-footer--${variant}` : ''}`}
+      data-testid={TESTID.app.footer}
+    >
       <div className="app-footer__columns">
-        <div className="app-footer__column">
-          <p className="app-footer__brand">{t('app.title')}</p>
-          <p className="app-footer__tagline">{t('app.tagline')}</p>
+        <div className="app-footer__column app-footer__column--brand">
+          <div>
+            <p className="app-footer__brand">{t('app.title')}</p>
+            <p className="app-footer__tagline">{t('app.tagline')}</p>
+          </div>
+          {slot === 'brand' && <AppControls />}
         </div>
 
         <nav className="app-footer__column" aria-labelledby="footer-services-heading">
@@ -88,12 +122,24 @@ export function Footer() {
             </li>
           </ul>
         </nav>
+        {slot === 'column' && (
+          <div
+            className="app-footer__column app-footer__column--controls"
+            aria-labelledby="footer-prefs-heading"
+          >
+            <h2 className="app-footer__heading" id="footer-prefs-heading">
+              {t('footer.preferences')}
+            </h2>
+            <AppControls />
+          </div>
+        )}
       </div>
 
       <div className="app-footer__bottom">
         <small data-testid={TESTID.app.footerCopyright}>
           {t('footer.copyright', { year: new Date().getFullYear(), site: SITE_NAME })}
         </small>
+        {slot === 'bottom' && <AppControls />}
         <nav className="app-footer__legal" data-testid={TESTID.app.footerLegal}>
           {LEGAL_LINKS.map((link) => (
             <a key={link.key} href={link.href}>

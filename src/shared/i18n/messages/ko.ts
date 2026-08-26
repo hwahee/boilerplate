@@ -27,6 +27,7 @@ export const ko: Record<MessageKey, string> = {
   'footer.otherServices': '관련 서비스',
   'footer.connect': '연결',
   'footer.github': 'GitHub',
+  'footer.preferences': '설정',
   'footer.terms': '이용약관',
   'footer.privacy': '개인정보처리방침',
   'footer.copyright': '© {year} {site}',
@@ -59,7 +60,7 @@ export const ko: Record<MessageKey, string> = {
 
   'designSystem.title': '디자인 시스템',
   'designSystem.description':
-    '모든 토큰과 컴포넌트를 한곳에서 확인합니다. 헤더의 컨트롤로 테마(라이트/다크), 디자인(A / B / 오피스 / 어린이), 언어를 전환해 보세요.',
+    '모든 토큰과 컴포넌트를 한곳에서 확인합니다. 푸터의 컨트롤로 테마(라이트/다크), 디자인(A / B / 오피스 / 어린이), 언어를 전환해 보세요.',
   'designSystem.colors': '컬러 토큰',
   'designSystem.typography': '타이포그래피',
   'designSystem.buttons': '버튼',

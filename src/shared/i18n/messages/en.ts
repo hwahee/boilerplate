@@ -31,6 +31,7 @@ export const en = {
   'footer.otherServices': 'Other Services',
   'footer.connect': 'Connect',
   'footer.github': 'GitHub',
+  'footer.preferences': 'Preferences',
   'footer.terms': 'Terms of Service',
   'footer.privacy': 'Privacy Policy',
   'footer.copyright': '© {year} {site}',
@@ -63,7 +64,7 @@ export const en = {
 
   'designSystem.title': 'Design System',
   'designSystem.description':
-    'Every token and component in one place. Use the header controls to toggle theme (light/dark), design variant (A / B / Office / Kids) and language.',
+    'Every token and component in one place. Use the footer controls to toggle theme (light/dark), design variant (A / B / Office / Kids) and language.',
   'designSystem.colors': 'Color tokens',
   'designSystem.typography': 'Typography',
   'designSystem.buttons': 'Buttons',

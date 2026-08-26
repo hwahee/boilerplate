@@ -244,6 +244,109 @@ a {
   gap: var(--space-4);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+ * TEMPORARY — footer layout candidates for design review (`?footer=1..4`).
+ *
+ * Each answers "the brand block does not read as separate from the link
+ * columns" a different way — structure, a rule, type hierarchy, whitespace —
+ * and pairs it with a home for the preference switches moving out of the
+ * header. Delete the losing three (and the switch in footer.tsx) once one is
+ * chosen.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* V1 — structural. The brand takes a full-width row of its own, closed with a
+   hairline, with the switches at its right end. Strongest separation, and the
+   row's spare width is what carries the controls. */
+.app-footer--v1 .app-footer__column--brand {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+/* V2 — a rule. One row still, but the brand column is twice as wide and
+   fenced off by a vertical hairline; the switches join the column system as
+   a fourth column with a heading of their own. */
+.app-footer--v2 .app-footer__columns {
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: var(--space-5);
+}
+
+.app-footer--v2 .app-footer__column--brand {
+  padding-right: var(--space-5);
+  border-right: var(--border-width) solid var(--color-border);
+}
+
+/* A 1fr column is too narrow for the switches in a row — stack them so the
+   language select keeps its own line instead of wrapping into a hole. */
+.app-footer--v2 .app-footer__column--controls .app-controls {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* V3 — type hierarchy, no added lines. The service name steps up to body size
+   and full-strength color while the column headings step down to small,
+   tracked-out labels, so the two read as different kinds of thing. The
+   switches go to the bottom utility line. (`uppercase` is a no-op in Korean;
+   the tracking carries it there.) */
+.app-footer--v3 .app-footer__columns {
+  grid-template-columns: 2fr 1fr 1fr;
+}
+
+.app-footer--v3 .app-footer__brand {
+  font-size: var(--font-size-body);
+  font-weight: 700;
+}
+
+.app-footer--v3 .app-footer__heading {
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-text-muted);
+}
+
+/* V4 — whitespace and alignment only. The brand stays left with the switches
+   stacked beneath it, the link columns are pushed together to the right, and
+   the gap between the two groups does all the separating. Lightest touch. */
+.app-footer--v4 .app-footer__columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+}
+
+.app-footer--v4 .app-footer__column--brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-right: auto;
+  max-width: 22rem;
+}
+
+.app-footer--v4 nav.app-footer__column {
+  min-width: 9rem;
+}
+
+/* Every variant collapses to a single stack on narrow screens, where a
+   vertical rule or a wide brand column would only get in the way. The
+   `.app-footer` prefix is load-bearing: it matches the specificity of the
+   `--v*` rules above, which this block has to be able to override. */
+@media (max-width: 40rem) {
+  .app-footer .app-footer__columns {
+    grid-template-columns: 1fr;
+  }
+
+  .app-footer .app-footer__column--brand {
+    padding-right: 0;
+    border-right: none;
+    max-width: none;
+  }
+}
+
 /* ── Button ───────────────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
