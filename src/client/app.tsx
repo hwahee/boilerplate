@@ -1,11 +1,11 @@
 /**
  * App shell: providers (query cache, theme, locale), router, and the layout
  * with the global controls (theme / design-variant / language switching) plus
- * the shared footer.
+ * the shared footer, which routes can opt out of one group at a time.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Moon, Palette, Sun } from 'lucide-react';
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router';
+import { BrowserRouter, NavLink, Outlet, Route, Routes } from 'react-router';
 
 import { SUPPORTED_LOCALES, type Locale } from '@shared/i18n';
 
@@ -92,7 +92,14 @@ function Header() {
   );
 }
 
-function Shell() {
+/**
+ * The chrome wrapped around a routed page.
+ *
+ * `footer` is the per-route switch for the shared footer. It defaults to
+ * `true`, so a new route keeps the footer unless it explicitly opts out —
+ * the exception has to be declared, never the rule.
+ */
+function AppLayout({ footer = true }: { footer?: boolean }) {
   const { t } = useI18n();
   return (
     <div className="app-shell">
@@ -101,14 +108,38 @@ function Shell() {
       </a>
       <Header />
       <main id="main" className="app-main">
-        <Routes>
-          <Route path="/" element={<TodosPage />} />
-          <Route path="/design-system" element={<DesignSystemPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
+        <Outlet />
       </main>
-      <Footer />
+      {footer && <Footer />}
     </div>
+  );
+}
+
+/**
+ * Route table. Chrome is expressed with layout routes rather than a flag
+ * consulted inside the pages, so which routes carry the footer is readable
+ * here in one place.
+ *
+ * Routes are ranked by specificity, not by source order, so the `*` fallback
+ * below never shadows a concrete path declared in another group.
+ */
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Standard chrome: header + footer. */}
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<TodosPage />} />
+        <Route path="/design-system" element={<DesignSystemPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+
+      {/* Pages that own the whole viewport — full-screen editors, embedded
+          widgets, kiosk views — go in their own group with the footer off:
+
+      <Route element={<AppLayout footer={false} />}>
+        <Route path="/embed/:id" element={<EmbedPage />} />
+      </Route> */}
+    </Routes>
   );
 }
 
@@ -118,7 +149,7 @@ export function App() {
       <ThemeProvider>
         <LocaleProvider>
           <BrowserRouter>
-            <Shell />
+            <AppRoutes />
           </BrowserRouter>
         </LocaleProvider>
       </ThemeProvider>

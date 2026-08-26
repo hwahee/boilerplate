@@ -186,6 +186,12 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
   링크 URL은 절대 http(s)이거나 루트 상대 경로만 허용되며(`@shared/domain/sitemap`),
   검증에 실패한 파일은 500으로 거절됩니다 — 깨진 링크를 배포하느니 눈에 띄게 실패합니다.
   크롤러용 `sitemap.xml`과는 무관한 별개의 문서입니다.
+- **푸터 on/off는 라우트 단위**: 크롬은 react-router의 layout route로 표현됩니다
+  (`app.tsx`의 `AppLayout` / `AppRoutes`). 기본값은 `footer = true`라 새 라우트는 가만히
+  두면 푸터를 갖고, 뷰포트 전체를 쓰는 페이지(전체화면 에디터·임베드 위젯 등)만
+  `<Route element={<AppLayout footer={false} />}>` 그룹에 넣어 예외를 **선언**합니다.
+  라우트는 소스 순서가 아니라 구체성으로 랭킹되므로 `*` 폴백이 다른 그룹의 구체적 경로를
+  가리지 않습니다.
 - **UI 자동화 / 접근성**: 모든 인터랙티브 컴포넌트는 `testId`가 **필수 prop**이며 값은
   `src/client/testing/testids.ts` 레지스트리에서만 나옵니다. WAI-ARIA(라벨, live region,
   `aria-busy`, `aria-current`, skip link, 네이티브 컨트롤 우선)를 준수합니다.
