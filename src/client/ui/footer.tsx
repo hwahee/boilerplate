@@ -1,7 +1,10 @@
 /**
- * Hybrid footer — a column block on top (service identity, related services,
- * connections) and one minimal line at the bottom (copyright + legal links),
- * separated from the page body by a single thin border.
+ * Hybrid footer, in three bands separated from the page body by one thin
+ * border: the identity row (service name, tagline and the global preference
+ * switches), the link columns below it, and a minimal copyright line last.
+ *
+ * The identity row is closed with a hairline of its own — that rule is what
+ * keeps the service's identity from reading as just another link column.
  *
  * The "Other Services" column is data-driven: it renders whatever
  * `/sitemap.json` serves, so adding a service is a data edit (see
@@ -44,110 +47,142 @@ function GithubMark() {
   );
 }
 
-/** Where the preference switches sit within the footer. */
-type ControlsSlot = 'brand' | 'column' | 'bottom';
-
 /**
- * TEMPORARY — design review only. `?footer=1..4` swaps in one of the layout
- * candidates defined in main.css; each pairs a way of separating the brand
- * block from the link columns with a home for the preference switches.
- * Delete this hook, `CONTROLS_SLOT`, and the `--v*` rules once one is chosen.
+ * TEMPORARY — design review only. The identity row above the hairline is
+ * settled; `?bottom=1..4` swaps the treatment of everything below it.
+ * Delete this hook, `BOTTOM_VARIANTS`, the branching it drives and the
+ * matching rule sets in main.css once one is chosen.
+ *
+ *   spread       two link columns pushed to opposite edges
+ *   legal-column terms/privacy promoted to a third column
+ *   merge        copyright and terms pulled up beside the columns
+ *   inline       no headings — every link on one wrapped line
  */
-const CONTROLS_SLOT: Record<string, ControlsSlot> = {
-  '': 'bottom',
-  v1: 'brand', // brand row, right end
-  v2: 'column', // a fourth column of its own
-  v3: 'bottom', // utility line, between copyright and legal
-  v4: 'brand', // stacked under the brand text
-};
+const BOTTOM_VARIANTS = ['spread', 'legal-column', 'merge', 'inline'] as const;
+type BottomVariant = (typeof BOTTOM_VARIANTS)[number];
 
-function useFooterVariant(): string {
+function useBottomVariant(): BottomVariant {
   const { search } = useLocation();
-  const variant = new URLSearchParams(search).get('footer');
-  return variant && /^[1-4]$/.test(variant) ? `v${variant}` : '';
+  const index = Number(new URLSearchParams(search).get('bottom')) - 1;
+  return BOTTOM_VARIANTS[index] ?? 'spread';
 }
 
 export function Footer() {
   const { t } = useI18n();
   const { data: sitemap } = useSitemap();
   const services = sitemap?.services ?? [];
-  const variant = useFooterVariant();
-  const slot = CONTROLS_SLOT[variant] ?? 'bottom';
+  const variant = useBottomVariant();
+
+  const legalLinks = LEGAL_LINKS.map((link) => (
+    <a key={link.key} href={link.href}>
+      {t(link.key)}
+    </a>
+  ));
+
+  const copyright = (
+    <small data-testid={TESTID.app.footerCopyright}>
+      {t('footer.copyright', { year: new Date().getFullYear(), site: SITE_NAME })}
+    </small>
+  );
+
+  const githubLink = (
+    <a className="app-footer__link-icon" href={GITHUB_URL} data-testid={TESTID.app.footerGithub}>
+      <GithubMark />
+      {t('footer.github')}
+    </a>
+  );
 
   return (
-    <footer
-      className={`app-footer${variant ? ` app-footer--${variant}` : ''}`}
-      data-testid={TESTID.app.footer}
-    >
-      <div className="app-footer__columns">
-        <div className="app-footer__column app-footer__column--brand">
-          <div>
-            <p className="app-footer__brand">{t('app.title')}</p>
-            <p className="app-footer__tagline">{t('app.tagline')}</p>
-          </div>
-          {slot === 'brand' && <AppControls />}
+    <footer className={`app-footer app-footer--${variant}`} data-testid={TESTID.app.footer}>
+      <div className="app-footer__identity">
+        <div>
+          <p className="app-footer__brand">{t('app.title')}</p>
+          <p className="app-footer__tagline">{t('app.tagline')}</p>
         </div>
+        <AppControls />
+      </div>
 
-        <nav className="app-footer__column" aria-labelledby="footer-services-heading">
-          <h2 className="app-footer__heading" id="footer-services-heading">
-            {t('footer.otherServices')}
-          </h2>
-          {services.length > 0 && (
-            <ul className="app-footer__list" data-testid={TESTID.app.footerServices}>
-              {services.map((service) => (
-                <li key={service.url}>
-                  <a href={service.url} title={service.description}>
-                    {service.name}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </nav>
-
-        <nav className="app-footer__column" aria-labelledby="footer-connect-heading">
-          <h2 className="app-footer__heading" id="footer-connect-heading">
-            {t('footer.connect')}
-          </h2>
-          <ul className="app-footer__list">
-            <li>
-              <a
-                className="app-footer__link-icon"
-                href={GITHUB_URL}
-                data-testid={TESTID.app.footerGithub}
-              >
-                <GithubMark />
-                {t('footer.github')}
-              </a>
-            </li>
+      {variant === 'inline' ? (
+        <nav className="app-footer__inline" aria-label={t('footer.otherServices')}>
+          <ul className="app-footer__inline-list" data-testid={TESTID.app.footerServices}>
+            {services.map((service) => (
+              <li key={service.url}>
+                <a href={service.url} title={service.description}>
+                  {service.name}
+                </a>
+              </li>
+            ))}
+            <li>{githubLink}</li>
           </ul>
         </nav>
-        {slot === 'column' && (
-          <div
-            className="app-footer__column app-footer__column--controls"
-            aria-labelledby="footer-prefs-heading"
-          >
-            <h2 className="app-footer__heading" id="footer-prefs-heading">
-              {t('footer.preferences')}
+      ) : (
+        <div className="app-footer__columns">
+          <nav className="app-footer__column" aria-labelledby="footer-services-heading">
+            <h2 className="app-footer__heading" id="footer-services-heading">
+              {t('footer.otherServices')}
             </h2>
-            <AppControls />
-          </div>
-        )}
-      </div>
+            {services.length > 0 && (
+              <ul className="app-footer__list" data-testid={TESTID.app.footerServices}>
+                {services.map((service) => (
+                  <li key={service.url}>
+                    <a href={service.url} title={service.description}>
+                      {service.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </nav>
 
-      <div className="app-footer__bottom">
-        <small data-testid={TESTID.app.footerCopyright}>
-          {t('footer.copyright', { year: new Date().getFullYear(), site: SITE_NAME })}
-        </small>
-        {slot === 'bottom' && <AppControls />}
-        <nav className="app-footer__legal" data-testid={TESTID.app.footerLegal}>
-          {LEGAL_LINKS.map((link) => (
-            <a key={link.key} href={link.href}>
-              {t(link.key)}
-            </a>
-          ))}
-        </nav>
-      </div>
+          <nav className="app-footer__column" aria-labelledby="footer-connect-heading">
+            <h2 className="app-footer__heading" id="footer-connect-heading">
+              {t('footer.connect')}
+            </h2>
+            <ul className="app-footer__list">
+              <li>{githubLink}</li>
+            </ul>
+          </nav>
+
+          {variant === 'legal-column' && (
+            <nav
+              className="app-footer__column"
+              aria-labelledby="footer-legal-heading"
+              data-testid={TESTID.app.footerLegal}
+            >
+              <h2 className="app-footer__heading" id="footer-legal-heading">
+                {t('footer.legal')}
+              </h2>
+              <ul className="app-footer__list">
+                {LEGAL_LINKS.map((link) => (
+                  <li key={link.key}>
+                    <a href={link.href}>{t(link.key)}</a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+
+          {variant === 'merge' && (
+            <div className="app-footer__column app-footer__column--meta">
+              <nav className="app-footer__legal" data-testid={TESTID.app.footerLegal}>
+                {legalLinks}
+              </nav>
+              {copyright}
+            </div>
+          )}
+        </div>
+      )}
+
+      {variant !== 'merge' && (
+        <div className="app-footer__bottom">
+          {copyright}
+          {variant !== 'legal-column' && (
+            <nav className="app-footer__legal" data-testid={TESTID.app.footerLegal}>
+              {legalLinks}
+            </nav>
+          )}
+        </div>
+      )}
     </footer>
   );
 }
