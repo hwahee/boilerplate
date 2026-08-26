@@ -156,7 +156,7 @@ a {
   padding-top: var(--space-5);
 }
 
-/* ── Footer (hybrid: column block + one minimal bottom line) ──────────────── */
+/* ── Footer (identity row · link columns · minimal bottom line) ───────────── */
 /* Tone: one step quieter than the body — small type, muted color, links that
    only underline on hover. It sizes with --font-size-sm rather than a hard
    12–13px so the high-visibility and skin designs keep their own scale
@@ -183,16 +183,17 @@ a {
   margin-bottom: var(--space-5);
 }
 
-/* auto-fit collapses the tracks nothing landed in, so two columns split the
-   width evenly and three take a third each — no empty trailing track. */
+/* Link columns sit at opposite edges of the row, which lines the last column
+   up under the preference switches above and leaves no dead half. */
 .app-footer__columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
   gap: var(--space-5);
 }
 
 .app-footer__column {
-  min-width: 0;
+  min-width: 9rem;
 }
 
 .app-footer__brand {
@@ -244,8 +245,9 @@ a {
   flex: none;
 }
 
-/* The bottom line is set apart by spacing alone — a second rule here would
-   fight the single divider that separates the whole footer from the body. */
+/* Spacing alone sets the last line apart. The footer has exactly two rules —
+   the one dividing it from the page body and the one closing the identity
+   row — and a third would turn a quiet block into a stack of boxes. */
 .app-footer__bottom {
   display: flex;
   flex-wrap: wrap;
@@ -260,69 +262,12 @@ a {
   gap: var(--space-4);
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
- * TEMPORARY — candidates for the band BELOW the identity hairline
- * (`?bottom=1..4`). The top band is settled; these four differ only in what
- * happens to the link columns and the copyright line. Delete the losing three
- * (and the branching in footer.tsx) once one is chosen.
- * ════════════════════════════════════════════════════════════════════════ */
-
-/* 1 spread — the two link columns go to opposite edges, so Connect lines up
-   under the preference switches and the row has no dead right half. */
-.app-footer--spread .app-footer__columns {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-5);
-}
-
-.app-footer--spread .app-footer__column {
-  min-width: 9rem;
-}
-
-/* 2 legal-column — terms and privacy become a third column, which fills the
-   row and leaves the last line as nothing but the copyright. Nothing to add
-   here: three columns already divide the grid evenly. */
-
-/* 3 merge — no separate last line at all. Copyright and terms ride along the
-   right edge of the column row, right-aligned against the columns' left. */
-.app-footer--merge .app-footer__columns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
-}
-
-.app-footer--merge .app-footer__column--meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--space-2);
-  margin-left: auto;
-  text-align: right;
-}
-
-/* 4 inline — headings dropped entirely; every link sits on one wrapped line,
-   which makes this by far the shortest of the four. */
-.app-footer__inline-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-/* Narrow screens stack the columns whatever the variant. The `.app-footer`
-   prefix matches the specificity of the `--*` rules above so this can win. */
+/* Opposite edges of a phone screen are far enough apart to read as unrelated,
+   so the columns stack instead of spreading. */
 @media (max-width: 40rem) {
-  .app-footer .app-footer__columns {
-    grid-template-columns: 1fr;
-  }
-
-  .app-footer--merge .app-footer__column--meta {
-    align-items: flex-start;
-    margin-left: 0;
-    text-align: left;
+  .app-footer__columns {
+    flex-direction: column;
+    gap: var(--space-4);
   }
 }
 

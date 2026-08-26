@@ -31,8 +31,6 @@ export const en = {
   'footer.otherServices': 'Other Services',
   'footer.connect': 'Connect',
   'footer.github': 'GitHub',
-  'footer.preferences': 'Preferences',
-  'footer.legal': 'Legal',
   'footer.terms': 'Terms of Service',
   'footer.privacy': 'Privacy Policy',
   'footer.copyright': '© {year} {site}',

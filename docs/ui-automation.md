@@ -46,19 +46,21 @@
 
 전체 목록은 `src/client/testing/testids.ts`가 소스 오브 트루스입니다. 주요 항목:
 
-| 영역          | testid                                                                                               |
-| ------------- | ---------------------------------------------------------------------------------------------------- |
-| 앱 셸         | `app.header`, `app.nav.todos`, `app.nav.design-system`, `app.controls.*`                             |
-| 푸터          | `app.footer`, `app.footer.services`, `app.footer.github`, `app.footer.copyright`, `app.footer.legal` |
-| Todos 생성    | `todos.create.form` / `.input` / `.submit` (+ `todos.create.input.error`)                            |
-| Todos 목록    | `todos.list`, `todos.item.<id>`, `todos.item.<id>.toggle`, `todos.item.<id>.delete`                  |
-| Todos 상태    | `todos.loading`, `todos.error`, `todos.error.retry`, `todos.empty`, `todos.total-count`              |
-| 필터/정렬     | `todos.filter.status`, `todos.sort.by`                                                               |
-| 페이지네이션  | `todos.pagination` / `.prev` / `.next` / `.status`                                                   |
-| 디자인 시스템 | `design-system.page`, `design-system.section.<name>`, `ds.*` (쇼케이스 컴포넌트)                     |
-| NotFound      | `not-found.page`, `not-found.home-link`                                                              |
+| 영역          | testid                                                                                                                 |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 앱 셸         | `app.header`, `app.nav.todos`, `app.nav.design-system`                                                                 |
+| 푸터          | `app.footer`, `app.controls.*`, `app.footer.services`, `app.footer.github`, `app.footer.copyright`, `app.footer.legal` |
+| Todos 생성    | `todos.create.form` / `.input` / `.submit` (+ `todos.create.input.error`)                                              |
+| Todos 목록    | `todos.list`, `todos.item.<id>`, `todos.item.<id>.toggle`, `todos.item.<id>.delete`                                    |
+| Todos 상태    | `todos.loading`, `todos.error`, `todos.error.retry`, `todos.empty`, `todos.total-count`                                |
+| 필터/정렬     | `todos.filter.status`, `todos.sort.by`                                                                                 |
+| 페이지네이션  | `todos.pagination` / `.prev` / `.next` / `.status`                                                                     |
+| 디자인 시스템 | `design-system.page`, `design-system.section.<name>`, `ds.*` (쇼케이스 컴포넌트)                                       |
+| NotFound      | `not-found.page`, `not-found.home-link`                                                                                |
 
 `TextField`는 에러 표시 시 자동으로 `` `${testId}.error` `` 요소를 추가합니다.
+
+테마·디자인·언어 컨트롤(`app.controls.*`)은 헤더가 아니라 푸터의 정체성 행에 있습니다 — testid는 그대로이므로 selector는 바뀌지 않지만, 스크롤이 필요할 수 있습니다.
 
 푸터의 `app.footer.services`는 `/sitemap.json` 응답이 도착한 뒤에만 존재합니다 — 서비스 목록을 검증하는 테스트는 이 요소의 등장을 기다리세요. 로딩·실패 시에는 컬럼 제목만 남고 목록 자체가 렌더링되지 않으므로, 그 상태를 나타내는 별도 신호는 없습니다.
 

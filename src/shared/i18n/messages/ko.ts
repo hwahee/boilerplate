@@ -27,8 +27,6 @@ export const ko: Record<MessageKey, string> = {
   'footer.otherServices': '관련 서비스',
   'footer.connect': '연결',
   'footer.github': 'GitHub',
-  'footer.preferences': '설정',
-  'footer.legal': '약관',
   'footer.terms': '이용약관',
   'footer.privacy': '개인정보처리방침',
   'footer.copyright': '© {year} {site}',
