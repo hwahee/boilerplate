@@ -87,10 +87,19 @@ a {
 }
 
 /* ── App shell ────────────────────────────────────────────────────────────── */
+/* Sticky footer, not a fixed one: the shell is a full-viewport-height column
+   and <main> takes every pixel the header and footer leave over. A short page
+   therefore ends with the footer at the bottom edge instead of a slab of empty
+   background below it, while a long page pushes the footer past the fold where
+   it can only be reached by scrolling. */
 .app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* fallback for browsers without dynamic viewport units */
+  min-height: 100dvh; /* excludes mobile browser chrome, which 100vh does not */
   max-width: 60rem;
   margin: 0 auto;
-  padding: var(--space-4) var(--space-4) var(--space-7);
+  padding: var(--space-4) var(--space-4) var(--space-5);
 }
 
 .app-header {
@@ -140,7 +149,10 @@ a {
   gap: var(--space-2);
 }
 
+/* `1 0 auto` rather than `flex: 1`: the basis stays at the content's natural
+   height, so tall pages are never asked to shrink into the viewport. */
 .app-main {
+  flex: 1 0 auto;
   padding-top: var(--space-5);
 }
 

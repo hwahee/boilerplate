@@ -173,7 +173,10 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
   hex 문자열입니다 — 설계 근거는 **[docs/palette-design.md](docs/palette-design.md)** 참고.
 - **공용 푸터**(`src/client/ui/footer.tsx`): 상단 컬럼(서비스명 / 관련 서비스 / 연결) +
   하단 1줄(저작권 · 약관 링크)의 하이브리드 구조로, 본문과는 얇은 `border-top` 하나로만
-  구분됩니다. 톤은 본문보다 한 단계 낮게 — `--font-size-sm`(디자인 A 기준 13px),
+  구분됩니다. 배치는 **sticky footer**(fixed 아님) — 앱 셸이 `min-height: 100dvh` 세로
+  플렉스 컬럼이고 `<main>`이 `flex: 1 0 auto`로 남는 공간을 전부 먹습니다. 내용이 짧으면
+  푸터가 화면 맨 아래에 붙고, 길면 스크롤해야 보이는 문서 맨 끝에 놓입니다 — 어느 쪽이든
+  뷰포트에 고정되어 본문을 가리는 일은 없습니다. 톤은 본문보다 한 단계 낮게 — `--font-size-sm`(디자인 A 기준 13px),
   `--color-text-muted`, 링크는 hover에서 밑줄만 붙습니다. 하드코딩된 12~13px 대신 토큰을
   쓰기 때문에 시인성 디자인(B)·스킨에서도 각자의 스케일을 유지합니다.
   "Other Services" 컬럼은 `GET /sitemap.json`(→ `public/sitemap.json`)을 그대로 렌더링하므로
