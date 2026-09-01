@@ -253,6 +253,101 @@ a {
   color: var(--color-text-muted);
 }
 
+/* ── Inline field (Mad Libs blank) ────────────────────────────────────────── */
+/*
+ * See src/client/ui/inline-field.tsx for why this is a separate class rather
+ * than a `.field__input` variant. inline-grid, so the column is as wide as the
+ * wider of input and name: a long name widens its own blank instead of
+ * colliding with the next one. Chrome takes an inline-grid's baseline from the
+ * first row, which is what keeps the blank on the surrounding text's baseline.
+ */
+.inline-field {
+  display: inline-grid;
+  grid-template-rows: auto auto;
+  justify-items: stretch;
+  row-gap: 2px;
+  vertical-align: baseline;
+}
+
+.inline-field__input {
+  font: inherit;
+  font-family: var(--font-mono);
+  /* `font: inherit` would otherwise drag in the host paragraph's line-height,
+     which on a Mad Libs sheet is inflated enough to make the blank several
+     times taller than the text it sits in. */
+  line-height: 1.4;
+  width: 100%;
+  min-width: 4ch;
+  max-width: 24ch;
+  field-sizing: content;
+  padding: 0 var(--space-1);
+  text-align: center;
+  color: var(--color-text);
+  background: transparent;
+  border: 0;
+  border-bottom: var(--inline-field-rule) solid var(--color-border);
+  border-radius: 0;
+  transition:
+    border-color var(--duration-fast),
+    background-color var(--duration-fast);
+}
+
+.inline-field__input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
+.inline-field__input:hover:not(:disabled) {
+  border-bottom-color: var(--color-primary);
+}
+
+.inline-field__input:focus-visible {
+  border-bottom-color: var(--color-primary);
+  outline-offset: 3px;
+}
+
+/* Same contract as `.field__input` — aria-invalid drives the danger styling. */
+.inline-field__input[aria-invalid='true'] {
+  border-bottom-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+}
+
+.inline-field__input:disabled {
+  color: var(--color-text-muted);
+  border-bottom-style: dashed;
+  cursor: not-allowed;
+}
+
+/* Capped rather than allowed to stretch a blank to absurd width; the full
+   name stays available through the label's `title`. */
+.inline-field__name {
+  justify-self: center;
+  max-width: 16ch;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text-muted);
+}
+
+.inline-field__input[aria-invalid='true'] ~ .inline-field__name {
+  color: var(--color-danger);
+}
+
+.inline-field__input:disabled ~ .inline-field__name {
+  opacity: 0.55;
+}
+
+/* A text run hosting blanks: line-height clears the widget's own height in
+   every skin (kids is the tallest, at ~2.9x its body size), so lines with and
+   without blanks keep the same rhythm. */
+.inline-field-text {
+  line-height: 3;
+}
+
 /* ── Badge / Alert / Spinner / Card ───────────────────────────────────────── */
 .badge {
   display: inline-block;

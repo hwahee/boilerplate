@@ -64,6 +64,7 @@ export const en = {
   'designSystem.feedback': 'Feedback',
   'designSystem.dataDisplay': 'Data display',
   'designSystem.disclosure': 'Disclosure (accordion)',
+  'designSystem.inlineField': 'Inline field (Mad Libs blank)',
   'designSystem.colorInput': 'Color input (palette)',
 
   'notFound.title': 'Page not found',

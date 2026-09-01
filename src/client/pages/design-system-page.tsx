@@ -16,6 +16,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Checkbox } from '../ui/checkbox';
+import { InlineField } from '../ui/inline-field';
 import { Palette, type PaletteSwatch } from '../ui/palette';
 import { Select } from '../ui/select';
 import { Spinner } from '../ui/spinner';
@@ -64,6 +65,10 @@ export function DesignSystemPage() {
   const [checked, setChecked] = useState(true);
   const [selectValue, setSelectValue] = useState<'one' | 'two'>('one');
   const [brandColor, setBrandColor] = useState<HexColor>(() => hexColor('#6366f1'));
+  const [clientCount, setClientCount] = useState('3');
+  const [rate, setRate] = useState('1.0');
+  const [pathId, setPathId] = useState('42');
+  const [pathQuery, setPathQuery] = useState('');
   // Recent colors live here, not in the component — see docs/palette-design.md §5.3.
   const [recentColors, setRecentColors] = useState<readonly PaletteSwatch[]>([]);
 
@@ -175,6 +180,59 @@ export function DesignSystemPage() {
           Presets, a hex field and the system picker (with an opacity slider — alpha is part of the
           value). Hovering or arrowing onto a swatch shows the exact string it will return. The
           popup opens in the top layer, so it is never clipped and shifts no layout.
+        </p>
+      </Section>
+
+      <Section id="inline-field" title={t('designSystem.inlineField')}>
+        <p className="inline-field-text">
+          Values that only read correctly in context go in the sentence, not under a label — clients{' '}
+          <InlineField
+            name="count"
+            value={clientCount}
+            onChange={(event) => setClientCount(event.target.value)}
+            testId="ds.inline-field.count"
+          />{' '}
+          firing{' '}
+          <InlineField
+            name="per second"
+            value={rate}
+            onChange={(event) => setRate(event.target.value)}
+            testId="ds.inline-field.rate"
+          />{' '}
+          requests each.
+        </p>
+
+        <p className="inline-field-text">
+          <code>/test/</code>
+          <InlineField
+            name="id"
+            value={pathId}
+            onChange={(event) => setPathId(event.target.value)}
+            invalid={pathId.trim() === ''}
+            testId="ds.inline-field.path-id"
+          />
+          <code>/query/</code>
+          <InlineField
+            name="query"
+            value={pathQuery}
+            onChange={(event) => setPathQuery(event.target.value)}
+            invalid={pathQuery.trim() === ''}
+            testId="ds.inline-field.path-query"
+          />
+        </p>
+
+        <div className="ds-row inline-field-text">
+          <InlineField name="organizationId" defaultValue="7" testId="ds.inline-field.long-name" />
+          <InlineField name="none" disabled testId="ds.inline-field.disabled" />
+        </div>
+
+        <p className="muted">
+          The blank widens with its value, and a name longer than the value widens the blank rather
+          than colliding with its neighbour — over 16 characters it truncates, with the full name on
+          the label&rsquo;s <code>title</code>. Empty-but-required sets <code>aria-invalid</code>,
+          the same contract as <code>TextField</code>. Deliberately not a <code>.field__input</code>{' '}
+          variant: the skins restyle that class as a boxed control, which a blank in a sentence must
+          not inherit.
         </p>
       </Section>
 
