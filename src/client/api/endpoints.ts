@@ -17,8 +17,9 @@
  */
 import type { Page } from '@shared/api/pagination';
 import type { CreateTodoInput, Todo, TodoListQuery, UpdateTodoInput } from '@shared/domain/todo';
+import type { DevLoginInput, User } from '@shared/domain/user';
 
-import { apiFetch } from './http';
+import { ApiRequestError, apiFetch } from './http';
 
 /** The client may send a partial list query; the server applies the defaults. */
 export type TodoListQueryInput = Partial<TodoListQuery>;
@@ -79,5 +80,52 @@ export const todosApi = {
    */
   remove(id: string): Promise<void> {
     return apiFetch(`/api/todos/${id}`, { method: 'DELETE' });
+  },
+};
+
+/**
+ * Sign-in. The session travels as an httpOnly cookie the browser sends on its
+ * own (same-origin), so none of these calls handle a token.
+ *
+ * These endpoints exist only when the server runs with `AUTH_DRIVER=dev`;
+ * otherwise every one of them answers 404 `NOT_FOUND`.
+ */
+export const authApi = {
+  /**
+   * `POST /api/auth/dev-login`
+   *
+   * Signs in by user id alone — no password (development only). The first
+   * sign-in with an id creates that user.
+   * - Body:   `{ userId: string }` — 1–50 chars of `a-z`, `0-9`, `_`, `-`.
+   * - Errors: 400 `VALIDATION_ERROR`.
+   * - Returns the signed-in `User` and sets the session cookie.
+   */
+  devLogin(input: DevLoginInput): Promise<User> {
+    return apiFetch('/api/auth/dev-login', { method: 'POST', body: input });
+  },
+
+  /**
+   * `GET /api/auth/me`
+   *
+   * The signed-in user.
+   * - Returns `null` when signed out (the server's 401 `UNAUTHORIZED`).
+   */
+  async me(): Promise<User | null> {
+    try {
+      return await apiFetch<User>('/api/auth/me');
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.code === 'UNAUTHORIZED') return null;
+      throw error;
+    }
+  },
+
+  /**
+   * `POST /api/auth/logout`
+   *
+   * Signs out (clears the session cookie). Succeeds when already signed out.
+   * - Returns 204 (void).
+   */
+  logout(): Promise<void> {
+    return apiFetch('/api/auth/logout', { method: 'POST' });
   },
 };

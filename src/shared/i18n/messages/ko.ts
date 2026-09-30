@@ -65,6 +65,13 @@ export const ko: Record<MessageKey, string> = {
   'designSystem.colorInput': '색상 입력 (팔레트)',
   'designSystem.overlays': '오버레이 (모달 / 시트 / 사이드바)',
 
+  'auth.userId': '아이디',
+  'auth.userIdPlaceholder': '아이디',
+  'auth.userIdInvalid': '영문 소문자, 숫자, _, -로 1–50자를 입력하세요.',
+  'auth.signIn': '로그인',
+  'auth.signOut': '로그아웃',
+  'auth.signedInAs': '{name}(으)로 로그인됨',
+
   'notFound.title': '페이지를 찾을 수 없습니다',
   'notFound.goHome': '홈으로 이동',
 

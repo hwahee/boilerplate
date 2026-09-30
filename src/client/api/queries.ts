@@ -2,21 +2,52 @@
  * TanStack Query bindings for the API catalog (./endpoints.ts).
  *
  * Server state lives exclusively in the query cache — components never copy
- * it into local state. Cache keys are produced only by the `todoKeys` factory
- * so invalidation stays consistent.
+ * it into local state. Cache keys are produced only by the key factories
+ * (`todoKeys`, `authKeys`) so invalidation stays consistent.
  */
 import type { Page } from '@shared/api/pagination';
 import type { Todo, TodoStatus } from '@shared/domain/todo';
+import type { User } from '@shared/domain/user';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { todosApi, type TodoListQueryInput } from './endpoints';
+import { authApi, todosApi, type TodoListQueryInput } from './endpoints';
 
 const todoKeys = {
   all: ['todos'] as const,
   lists: () => [...todoKeys.all, 'list'] as const,
   list: (query: TodoListQueryInput) => [...todoKeys.lists(), query] as const,
 };
+
+const authKeys = {
+  me: ['auth', 'me'] as const,
+};
+
+/**
+ * The signed-in user: `User`, or `null` when signed out. The query errors
+ * (404 `NOT_FOUND`) when the server runs without sign-in (`AUTH_DRIVER=none`).
+ */
+export function useMe() {
+  return useQuery({ queryKey: authKeys.me, queryFn: () => authApi.me() });
+}
+
+/** Signs in by user id; the returned user becomes the cached `me` directly. */
+export function useDevLogin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => authApi.devLogin({ userId }),
+    onSuccess: (user) => queryClient.setQueryData<User | null>(authKeys.me, user),
+  });
+}
+
+/** Signs out; `me` becomes `null` without a refetch. */
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => authApi.logout(),
+    onSuccess: () => queryClient.setQueryData<User | null>(authKeys.me, null),
+  });
+}
 
 /** Paginated list; keeps the previous page rendered while the next one loads. */
 export function useTodoList(query: TodoListQueryInput) {

@@ -17,6 +17,13 @@ export const TESTID = {
     themeToggle: 'app.controls.theme-toggle',
     designToggle: 'app.controls.design-toggle',
     localeSelect: 'app.controls.locale-select',
+    account: {
+      form: 'app.account.form',
+      userIdInput: 'app.account.user-id',
+      signIn: 'app.account.sign-in',
+      user: 'app.account.user',
+      signOut: 'app.account.sign-out',
+    },
   },
   todos: {
     page: 'todos.page',

@@ -69,6 +69,13 @@ export const en = {
   'designSystem.colorInput': 'Color input (palette)',
   'designSystem.overlays': 'Overlays (modal / sheet / sidebar)',
 
+  'auth.userId': 'User ID',
+  'auth.userIdPlaceholder': 'user id',
+  'auth.userIdInvalid': 'Use 1–50 lowercase letters, digits, _ or -.',
+  'auth.signIn': 'Sign in',
+  'auth.signOut': 'Sign out',
+  'auth.signedInAs': 'Signed in as {name}',
+
   'notFound.title': 'Page not found',
   'notFound.goHome': 'Go to home',
 

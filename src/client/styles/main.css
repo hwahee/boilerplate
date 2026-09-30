@@ -177,8 +177,36 @@ a {
 
 .app-controls {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+/* Sign-in controls inside .app-controls (src/client/auth/account-controls.tsx). */
+.account-controls {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.account-controls .field {
+  position: relative;
+  width: 10rem;
+}
+
+/* Overlays below the input so an error never shifts the header row. */
+.account-controls .field__error {
+  position: absolute;
+  top: 100%;
+  white-space: nowrap;
+}
+
+.account-controls__user {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: center;
+  font-size: var(--font-size-sm);
 }
 
 .app-main {
