@@ -57,14 +57,15 @@ bun run dev               # 개발 서버 (서버 watch + 클라이언트 HMR) �
 
 DB 없이 바로 실행하려면 `.env`에서 `DB_DRIVER=memory`로 바꾸면 됩니다(테스트도 이 드라이버를 사용).
 
-| 명령            | 설명                                                                  |
-| --------------- | --------------------------------------------------------------------- |
-| `bun run dev`   | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                          |
-| `bun test`      | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행 |
-| `bun run check` | prettier + eslint + tsc + knip + test 전체 게이트 (pre-push와 동일)   |
-| `bun run build` | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)    |
-| `bun run start` | 빌드 산출물 실행                                                      |
-| `bun run db:*`  | `db:up` / `db:migrate` / `db:seed` / `db:setup`                       |
+| 명령                      | 설명                                                                         |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `bun run dev`             | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                                 |
+| `bun test`                | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행        |
+| `bun run check`           | prettier + eslint + tsc + knip + test 전체 게이트 (pre-push와 동일)          |
+| `bun run build`           | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)           |
+| `bun run start`           | 빌드 산출물 실행                                                             |
+| `bun run db:*`            | `db:up` / `db:migrate` / `db:seed` / `db:setup`                              |
+| `bun run compiler:report` | React Compiler가 컴파일하지 않은 클라이언트 컴포넌트·훅 목록 (`--all`: 전부) |
 
 ## 아키텍처 결정
 
@@ -216,7 +217,9 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
   입력이 그대로인 JSX·계산값을 재사용하는 코드를 빌드 시점에 넣습니다. 그래서 속도만을 위한
   `memo`/`useMemo`/`useCallback`은 직접 쓰지 않습니다. 개발 서버와 `.ts` 파일(훅 등)은 컴파일되지
   않으므로 동일성에 기대는 memo(이펙트 의존성, context로 내려가는 함수, `.ts` 훅의 반환값)는 계속 씁니다.
-  컴파일러가 빌드에서 빠지면 `bun run build`가 실패합니다. 원칙은 [CLAUDE.md](CLAUDE.md)에 있습니다.
+  컴파일러가 빌드에서 빠지면 `bun run build`가 실패합니다. 컴파일러는 지원하지 않는 문법이나 React 규칙
+  위반이 있는 컴포넌트를 경고 없이 건너뛰므로, `bun run compiler:report`로 컴파일되지 않은 컴포넌트·훅을
+  확인합니다. 원칙은 [CLAUDE.md](CLAUDE.md)에 있습니다.
 - **빌드**: Bun 번들러 단독 사용. `bun run build` 한 번으로 서버+클라이언트+마이그레이터가
   `dist/`에 떨어집니다. 개발 모드는 Bun의 HTML import 기반 HMR.
 - **Docker**:
