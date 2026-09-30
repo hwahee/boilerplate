@@ -13,6 +13,7 @@ src/
 │   └── domain/      # 도메인 타입 + 검증기 (서버·클라이언트 공용 계약)
 ├── server/          # Bun server (API + 클라이언트 서빙 + 워커)
 │   ├── http/        # 라우트 공통 미들웨어 (CORS, 버전, 에러 매핑, locale)
+│   ├── auth/        # 요청 신원 — AUTH_DRIVER별로 "누가 호출했나"를 읽는 유일한 자리
 │   ├── routes/      # 엔드포인트 정의
 │   ├── services/    # 비즈니스 로직 (트랜잭션 경계가 여기서 드러남)
 │   ├── repositories/# 영속성 계약 + postgres/in-memory 구현
@@ -21,6 +22,7 @@ src/
 │   └── container.ts # 컴포지션 루트 — 프로세스당 싱글톤 관리
 └── client/          # React SPA
     ├── api/         # ★ 모든 API가 endpoints.ts 한 곳에 문서화되어 모임
+    ├── auth/        # 헤더의 로그인/로그아웃 컨트롤
     ├── ui/          # 디자인 시스템 컴포넌트
     ├── styles/      # 디자인 토큰 (라이트/다크 × 디자인 A/B)
     ├── theme/ i18n/ # 테마·로케일 컨텍스트
@@ -147,24 +149,23 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 
 ### 인증 (회원)
 
-**아직 구현 전**이지만 방향은 확정되어 있습니다 (AI 작업용 전제는 [CLAUDE.md](CLAUDE.md)).
+확정된 전제는 [CLAUDE.md](CLAUDE.md)에 있습니다: 비밀번호를 다루지 않고, 개발 단계는 아이디만으로
+로그인하며, 실제 인증은 나중에 구글 같은 외부 로그인에 위임합니다.
 
-- 비밀번호를 다루지 않습니다. 개발 단계에서는 아이디만으로 로그인하고, 실제 인증은 구글 같은
-  외부 로그인에 위임합니다.
-- 다음 단계 계획: 인증 방식도 다른 인프라처럼 드라이버로 교체합니다 — `AUTH_DRIVER`
-  (`none` 기본 · `dev` · 나중에 `google`). 로그인 상태는 httpOnly 쿠키 하나로 전달되며
-  **same-origin 전제**입니다. CORS에서 `Access-Control-Allow-Credentials`를 켜지 않으므로
-  `CORS_ORIGINS`의 교차 출처 호출자에게는 쿠키가 전달되지 않습니다.
-
-이미 준비된 기반:
-
-- **401 `UNAUTHORIZED`** — 서비스·라우트에서 `UnauthorizedError`(`src/server/lib/errors.ts`)를
-  던지면 로컬라이즈된 에러 엔벨로프로 응답합니다.
-- **`/api/*` 폴백** — 마운트되지 않은 API 경로·메서드(예: 인증을 끈 상태의 `/api/auth/me`)도
-  SPA의 `index.html`(200)이 아니라 JSON 404로 응답합니다 (`src/server/routes/api-fallback.ts`).
-- **4xx는 재시도하지 않음** — 로그아웃 상태의 401이 재시도 지연 없이 바로 화면에 반영됩니다.
-- **in-memory 롤백이 모든 테이블을 포함** — `MemoryStore`에 테이블 필드를 추가하면 트랜잭션
-  롤백 대상이 자동으로 됩니다.
+- **드라이버 교체**: `AUTH_DRIVER=none|dev` (미설정 시 `none`, `.env.example`은 `dev`).
+  - `none` — 로그인 없음. `/api/auth/*`가 마운트되지 않아 JSON 404이고, 헤더 컨트롤도 숨겨집니다.
+  - `dev` — 아이디만으로 로그인. **처음 로그인한 아이디가 곧 가입**입니다(`users` 행 + 감사 로그).
+    아이디를 알면 누구나 그 계정으로 들어가므로 `APP_ENV=production`에서는 부팅을 거부합니다.
+  - 외부 로그인은 드라이버 하나를 더하는 것으로 붙입니다 — 쿠키에 무엇을 담고 어떻게 검증하는지는
+    `src/server/auth/session.ts` 한 곳에만 있습니다.
+- **API**: `POST /api/auth/dev-login {userId}` → `User` + 세션 쿠키, `GET /api/auth/me` →
+  `User | 401`, `POST /api/auth/logout` → 204. 상세는 `src/client/api/endpoints.ts`의 `authApi`.
+- **신원 전달**: 라우트·서비스는 `ctx.userId`(`src/server/http/context.ts`)만 읽습니다. 로그인이
+  필요한 곳은 `UnauthorizedError`를 던지면 로컬라이즈된 401 `UNAUTHORIZED`가 됩니다.
+- **쿠키**: httpOnly(페이지 스크립트가 못 읽음) + `SameSite=Lax`, **same-origin 전제**입니다. CORS에서
+  `Access-Control-Allow-Credentials`를 켜지 않으므로 `CORS_ORIGINS`의 교차 출처 호출자에게는
+  쿠키가 전달되지 않습니다.
+- **아직 없는 것**: todos와 사용자의 연결(소유자), 감사 로그의 행위자, 서명된 쿠키, 외부 로그인.
 
 ### i18n
 
@@ -220,9 +221,10 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 
 ## 테스트 전략
 
-- **단위**: 비즈니스 로직(`TodoService`) — 트랜잭션 롤백, 이벤트 발행, 성공/실패 케이스.
+- **단위**: 비즈니스 로직(`TodoService`, `AuthService`) — 트랜잭션 롤백, 이벤트 발행,
+  성공/실패 케이스. 설정 가드(`AUTH_DRIVER=dev` × 운영)와 세션 쿠키 해석도 단위로 검증합니다.
   라우트가 아직 던지지 않는 도메인 에러의 HTTP 매핑(401)은 `respond.test.ts`에서 검증합니다.
 - **통합**: 실제 앱을 임시 포트에 띄워 HTTP로 검증 — CRUD, 페이지네이션/정렬/필터,
   검증 실패(400)와 로컬라이즈된 메시지, 404(없는 API 경로·메서드 포함), 버전 스큐(409),
-  CORS 허용/거부, 헬스체크.
+  CORS 허용/거부, 헬스체크, 로그인 → `me` 200 → 로그아웃 → `me` 401.
 - 전부 in-memory 드라이버로 돌므로 **`bun test` 하나로, 외부 환경 없이** 실행됩니다.
