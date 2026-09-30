@@ -213,12 +213,14 @@ describe('ChatService.participantFor', () => {
     expect(participant).toEqual(ALICE);
   });
 
-  test('a member with no user row (dev driver) falls back to the id', async () => {
-    const participant = await makeService().participantFor(
-      { kind: 'member', userId: 'ghost' },
-      undefined,
-    );
-    expect(participant).toEqual({ kind: 'member', userId: 'ghost', displayName: 'ghost' });
+  test('a session naming a user that does not exist is a guest, as `me` answers 401', async () => {
+    // e.g. signed in, then the database was reset: the page shows the visitor
+    // signed out, so chat must name them the same way.
+    const chat = makeService();
+    expect(await chat.participantFor({ kind: 'member', userId: 'ghost' }, 'a1b2c3')).toEqual(GUEST);
+    await expect(
+      chat.participantFor({ kind: 'member', userId: 'ghost' }, undefined),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   test('a guest — or anyone, without sign-in — is their tab guest id', async () => {

@@ -77,17 +77,14 @@ export class ChatService {
 
   /**
    * Who is speaking: a member as their user (display name as of now), anyone
-   * else as the guest their tab says they are.
+   * else as the guest their tab says they are. A session naming a user that
+   * does not exist (e.g. the database was reset) counts as signed out, as
+   * `GET /api/auth/me` answers it — the page draws "me" from that answer.
    */
   async participantFor(caller: Caller, guestId: string | undefined): Promise<ChatParticipant> {
     if (caller.kind === 'member') {
       const user = await this.deps.users.findById(caller.userId);
-      return {
-        kind: 'member',
-        userId: caller.userId,
-        // The dev driver trusts a cookie even for an id with no user row.
-        displayName: user?.displayName ?? caller.userId,
-      };
+      if (user) return { kind: 'member', userId: user.id, displayName: user.displayName };
     }
     if (guestId === undefined) {
       throw new ValidationError([

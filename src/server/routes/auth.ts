@@ -8,6 +8,7 @@ import { devLoginValidator } from '@shared/domain/user';
 
 import { clearSessionCookie, setSessionCookie } from '../auth/session';
 import type { Container } from '../container';
+import { UnauthorizedError } from '../lib/errors';
 import { apiRoute, json, type HttpDeps } from '../http/respond';
 
 /** Plain-path routes (no `:params`), so their requests type as `BunRequest<string>`. */
@@ -33,13 +34,25 @@ export function authRoutes(container: Container, deps: HttpDeps): AuthRoutes {
 
     '/api/auth/me': apiRoute<'/api/auth/me'>(
       {
-        /** GET /api/auth/me → User | 401 */
-        GET: async (_req, { caller }) =>
-          json(
-            await container
-              .authService()
-              .currentUser(caller.kind === 'member' ? caller.userId : undefined),
-          ),
+        /**
+         * GET /api/auth/me → User | 401. A session naming a user that does not
+         * exist (e.g. the database was reset) is cleared with the 401: the page
+         * then shows the visitor signed out, with no sign-out to press.
+         */
+        GET: async (req, { caller }) => {
+          try {
+            return json(
+              await container
+                .authService()
+                .currentUser(caller.kind === 'member' ? caller.userId : undefined),
+            );
+          } catch (error) {
+            if (error instanceof UnauthorizedError && caller.kind === 'member') {
+              clearSessionCookie(req);
+            }
+            throw error;
+          }
+        },
       },
       deps,
     ),

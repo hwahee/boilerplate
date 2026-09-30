@@ -337,9 +337,14 @@ describe('auth (AUTH_DRIVER=dev)', () => {
     expect(body.error).toMatchObject({ code: 'UNAUTHORIZED', message: '로그인이 필요합니다.' });
   });
 
-  test('a session naming a user that does not exist is 401', async () => {
-    const { status } = await api('GET', '/api/auth/me', { headers: { cookie: 'session=ghost' } });
+  test('a session naming a user that does not exist is 401, and the cookie is cleared', async () => {
+    // e.g. the database was reset: the page shows the visitor signed out and
+    // offers no sign-out, so the answer itself drops the dangling session.
+    const { status, headers } = await api('GET', '/api/auth/me', {
+      headers: { cookie: 'session=ghost' },
+    });
     expect(status).toBe(401);
+    expect(headers.get('set-cookie')).toMatch(/^session=;.*Expires=Thu, 01 Jan 1970/);
   });
 
   test('rejects malformed user ids', async () => {
