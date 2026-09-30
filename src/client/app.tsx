@@ -12,8 +12,8 @@ import { isRetryableError } from './api/http';
 import { AccountControls } from './auth/account-controls';
 import { LocaleProvider, useI18n } from './i18n/locale-context';
 import { DesignSystemPage } from './pages/design-system-page';
+import { HomePage } from './pages/home-page';
 import { NotFoundPage } from './pages/not-found-page';
-import { TodosPage } from './pages/todos-page';
 import { TESTID } from './testing/testids';
 import { nextDesign, ThemeProvider, useTheme, type Design } from './theme/theme-context';
 import { Button } from './ui/button';
@@ -105,7 +105,7 @@ function Shell() {
       <Header />
       <main id="main" className="app-main">
         <Routes>
-          <Route path="/" element={<TodosPage />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/design-system" element={<DesignSystemPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

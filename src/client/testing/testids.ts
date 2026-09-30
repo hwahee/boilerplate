@@ -47,6 +47,20 @@ export const TESTID = {
     paginationNext: 'todos.pagination.next',
     paginationStatus: 'todos.pagination.status',
   },
+  home: {
+    page: 'home.page',
+    chat: {
+      panel: 'home.chat.panel',
+      status: 'home.chat.status',
+      participants: 'home.chat.participants',
+      log: 'home.chat.log',
+      message: (seq: number) => `home.chat.message.${seq}`,
+      empty: 'home.chat.empty',
+      form: 'home.chat.form',
+      input: 'home.chat.input',
+      send: 'home.chat.send',
+    },
+  },
   designSystem: {
     page: 'design-system.page',
     section: (name: string) => `design-system.section.${name}`,

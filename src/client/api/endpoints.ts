@@ -16,6 +16,12 @@
  * ./queries.ts), never call `fetch` directly.
  */
 import type { Page } from '@shared/api/pagination';
+import type {
+  ChatHistory,
+  ChatHistoryQuery,
+  ChatMessage,
+  SendChatMessageInput,
+} from '@shared/domain/chat';
 import type { CreateTodoInput, Todo, TodoListQuery, UpdateTodoInput } from '@shared/domain/todo';
 import type { DevLoginInput, User } from '@shared/domain/user';
 
@@ -127,5 +133,46 @@ export const authApi = {
    */
   logout(): Promise<void> {
     return apiFetch('/api/auth/logout', { method: 'POST' });
+  },
+};
+
+/**
+ * Chat rooms — the HTTP half: catching up and sending. New messages and who
+ * is in a room arrive over the `/ws/chat` socket instead, which the chat core
+ * (src/client/chat) manages; features use its hooks (`useChatRoomState`, `useChatRoomActions`) rather than
+ * calling these directly.
+ */
+export const chatApi = {
+  /**
+   * `GET /api/chat/rooms/:roomId/messages`
+   *
+   * The room's backlog, oldest first: its latest messages, as many and as far
+   * back as the room's policy allows. Not the page/pageSize convention —
+   * messages keep arriving, so the cursor is a message number.
+   * - Query:  `after` — only messages with a higher `seq` (catching up after a reconnect).
+   * - Errors: 400 `VALIDATION_ERROR`, 404 `NOT_FOUND` for an unknown room.
+   * - Returns `{ items: ChatMessage[] }`.
+   */
+  history(roomId: string, query: ChatHistoryQuery = {}): Promise<ChatHistory> {
+    return apiFetch(`/api/chat/rooms/${encodeURIComponent(roomId)}/messages`, {
+      searchParams: query,
+    });
+  },
+
+  /**
+   * `POST /api/chat/rooms/:roomId/messages`
+   *
+   * Sends a message; everyone in the room receives it over `/ws/chat`. Open to
+   * guests, who name themselves with their tab's guest id.
+   * - Body:   `{ text: string, guestId?: string }` — text 1–1000 chars, not
+   *           blank; `guestId` (6 hex chars) required when not signed in.
+   * - Errors: 400 `VALIDATION_ERROR`, 404 `NOT_FOUND`.
+   * - Returns 201 with the stored `ChatMessage` (`seq` = the room's next number).
+   */
+  send(roomId: string, input: SendChatMessageInput): Promise<ChatMessage> {
+    return apiFetch(`/api/chat/rooms/${encodeURIComponent(roomId)}/messages`, {
+      method: 'POST',
+      body: input,
+    });
   },
 };

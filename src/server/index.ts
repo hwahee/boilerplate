@@ -9,6 +9,8 @@
  * CONTAINS the built client, so one deployable unit always ships matching
  * client and server code (see @shared/api/version for the skew handshake).
  */
+import { HOME_CHAT_ROOM } from '@shared/domain/home-chat';
+
 import homepage from '../client/index.html';
 import { buildApp, WS_TOPIC_TODOS } from './app';
 import { loadServerConfig } from './config';
@@ -30,6 +32,10 @@ const stopHooks: (() => Promise<void>)[] = [];
 // ── Web role ────────────────────────────────────────────────────────────────
 if (config.serverRole === 'web' || config.serverRole === 'all') {
   const app = buildApp(container, state);
+
+  // The home page's one chat room. A feature attaching chat opens its rooms
+  // the same way (ChatService.openRoom); re-opening only refreshes the policy.
+  await container.chatService().openRoom(HOME_CHAT_ROOM);
 
   const server = Bun.serve({
     port: config.port,
@@ -54,9 +60,12 @@ if (config.serverRole === 'web' || config.serverRole === 'all') {
     .subscribe(CHANNELS.todosChanged, (message) =>
       server.publish(WS_TOPIC_TODOS, JSON.stringify(message)),
     );
+  // Chat: bus → this instance's chat sockets, plus their presence heartbeat.
+  const stopChat = await container.chatGateway().start();
 
   stopHooks.push(async () => {
     await unsubscribe();
+    await stopChat();
     // Stop accepting new connections, then wait for in-flight requests to
     // finish (graceful; `server.stop(true)` would abort them instead).
     await server.stop();

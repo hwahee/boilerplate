@@ -10,12 +10,15 @@
  * is process-local and not safe for concurrent interleaved transactions —
  * fine for tests and local development, never used in production.
  */
+import type { ChatMessage, ChatRoom } from '@shared/domain/chat';
 import type { Todo, TodoListQuery } from '@shared/domain/todo';
 import type { User } from '@shared/domain/user';
 
 import type {
   AuditLogEntry,
   AuditLogRepository,
+  ChatMessageRepository,
+  ChatRoomRepository,
   DbSession,
   TodoRepository,
   UnitOfWork,
@@ -29,6 +32,9 @@ export class MemoryStore {
   todos = new Map<string, Todo>();
   users = new Map<string, User>();
   auditLogs: AuditLogEntry[] = [];
+  chatRooms = new Map<string, { room: ChatRoom; lastSeq: number }>();
+  /** Per room, in `seq` order. */
+  chatMessages = new Map<string, ChatMessage[]>();
 
   /**
    * Deep copy of every table. Deliberately not a per-table list: a table added
@@ -128,6 +134,59 @@ export function createMemoryAuditLogRepository(store: MemoryStore): AuditLogRepo
     async append(entry) {
       store.auditLogs.push({ ...entry });
       return Promise.resolve();
+    },
+  };
+}
+
+export function createMemoryChatRoomRepository(store: MemoryStore): ChatRoomRepository {
+  return {
+    async findById(id) {
+      const stored = store.chatRooms.get(id);
+      return Promise.resolve(stored ? structuredClone(stored.room) : null);
+    },
+
+    async upsert(room) {
+      const lastSeq = store.chatRooms.get(room.id)?.lastSeq ?? 0;
+      store.chatRooms.set(room.id, { room: structuredClone(room), lastSeq });
+      return Promise.resolve();
+    },
+
+    async nextSeq(roomId) {
+      const stored = store.chatRooms.get(roomId);
+      if (!stored) return Promise.resolve(null);
+      stored.lastSeq += 1;
+      return Promise.resolve(stored.lastSeq);
+    },
+  };
+}
+
+export function createMemoryChatMessageRepository(store: MemoryStore): ChatMessageRepository {
+  return {
+    async insert(message) {
+      const messages = store.chatMessages.get(message.roomId) ?? [];
+      messages.push(structuredClone(message));
+      store.chatMessages.set(message.roomId, messages);
+      return Promise.resolve();
+    },
+
+    async listLatest(roomId, { limit, since, afterSeq = 0 }) {
+      const matching = (store.chatMessages.get(roomId) ?? []).filter(
+        (message) => message.seq > afterSeq && (since === undefined || message.createdAt >= since),
+      );
+      return Promise.resolve(structuredClone(matching.slice(-limit)));
+    },
+
+    async deleteExpired(now) {
+      let deleted = 0;
+      for (const [roomId, messages] of store.chatMessages) {
+        const retentionMs = store.chatRooms.get(roomId)?.room.policy.retentionMs ?? null;
+        if (retentionMs === null) continue;
+        const cutoff = new Date(Date.parse(now) - retentionMs).toISOString();
+        const kept = messages.filter((message) => message.createdAt >= cutoff);
+        deleted += messages.length - kept.length;
+        store.chatMessages.set(roomId, kept);
+      }
+      return Promise.resolve(deleted);
     },
   };
 }
