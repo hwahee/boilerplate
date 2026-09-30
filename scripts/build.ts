@@ -21,7 +21,13 @@ const version =
 
 await rm('dist', { recursive: true, force: true });
 
-const define = { APP_BUILD_VERSION: JSON.stringify(version) };
+const define = {
+  APP_BUILD_VERSION: JSON.stringify(version),
+  // The client is bundled through the server's HTML import, which does not
+  // set this on its own: without it React ships its development build
+  // (several times slower, with dev-only checks and warnings).
+  'process.env.NODE_ENV': JSON.stringify('production'),
+};
 
 // Separate builds keep the output flat: dist/index.js + dist/migrate.js.
 for (const entrypoint of ['src/server/index.ts', 'scripts/migrate.ts']) {
@@ -35,6 +41,15 @@ for (const entrypoint of ['src/server/index.ts', 'scripts/migrate.ts']) {
   });
   if (!result.success) {
     for (const log of result.logs) console.error(log);
+    process.exit(1);
+  }
+}
+
+// Guard: a development React build in the output means the define above no
+// longer reaches the client bundle.
+for await (const file of new Bun.Glob('dist/*.js').scan()) {
+  if ((await Bun.file(file).text()).includes('jsxDEV')) {
+    console.error(`${file} contains React's development build (jsxDEV).`);
     process.exit(1);
   }
 }
