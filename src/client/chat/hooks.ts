@@ -102,7 +102,12 @@ export interface ChatRoomActions {
   isMine: (message: ChatMessage) => boolean;
 }
 
-/** Acting in a room. Subscribes to nothing: it re-renders only on a sign-in or sign-out. */
+/**
+ * Acting in a room. Subscribes to nothing: it re-renders only on a sign-in or
+ * sign-out. The `useMemo` stays hand-written: this is a .ts file, which the
+ * React Compiler never sees, and callers rely on `isMine` keeping its
+ * identity (compiled components redraw every row when it changes).
+ */
 export function useChatRoomActions(roomId: string): ChatRoomActions {
   const room = roomFor(roomId);
   const selfKey = useSelfKey();

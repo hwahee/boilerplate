@@ -7,7 +7,10 @@
  * The box is split so that each part holds only the state it draws: the
  * frame never re-renders from chat traffic, typing redraws only the composer,
  * a person arriving redraws only the participant list, and a new message
- * adds one row to the log — rows already drawn are left alone.
+ * adds one row to the log. Rows already drawn are left alone by the React
+ * Compiler in production builds: a message object never changes, and the
+ * chat core hands out the same one every time (no hand-written memo — see
+ * CLAUDE.md).
  */
 import type { ChatMessage, ChatParticipant } from '@shared/domain/chat';
 import { participantKey, sendChatMessageValidator } from '@shared/domain/chat';
@@ -16,7 +19,7 @@ import type { MessageKey, MessageParams } from '@shared/i18n';
 import { formatUtcInTimeZone } from '@shared/time';
 import { useMutation } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
-import { memo, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ApiRequestError } from '../api/http';
 import { useChatRoomActions, useChatRoomState } from '../chat/hooks';
@@ -132,19 +135,7 @@ function ChatLog() {
   );
 }
 
-/**
- * A message never changes, and the chat core hands out the same object for
- * it every time — so a drawn row only needs drawing again when the language
- * changes (through `useI18n`) or when it stops or starts being "mine" (a
- * sign-in or sign-out). `memo` is what tells React that.
- */
-const ChatMessageRow = memo(function ChatMessageRow({
-  message,
-  mine,
-}: {
-  message: ChatMessage;
-  mine: boolean;
-}) {
+function ChatMessageRow({ message, mine }: { message: ChatMessage; mine: boolean }) {
   const { t, locale } = useI18n();
   return (
     <li
@@ -164,7 +155,7 @@ const ChatMessageRow = memo(function ChatMessageRow({
       <p className="chat-message__text">{message.text}</p>
     </li>
   );
-});
+}
 
 function ChatComposer() {
   const { t } = useI18n();
