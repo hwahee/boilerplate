@@ -13,8 +13,8 @@ const MAX_RETRY_MS = 15_000;
 /**
  * The tab's one chat socket (`/ws/chat`), shared by every room on the page.
  *
- * It opens when the first room is watched and closes after the last one is
- * let go. While any room is watched it keeps itself connected — reconnecting
+ * It opens when the first room is watched and closes shortly after the last
+ * one is let go. While any room is watched it keeps itself connected — reconnecting
  * with backoff, then re-joining every watched room, which answers each with a
  * fresh `joined` so the room catches up on what it missed.
  */
@@ -23,6 +23,7 @@ export class ChatConnection {
   private readonly rooms = new Map<string, Set<RoomListener>>();
   private retryMs = FIRST_RETRY_MS;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
+  private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
   /** `url` is read on every (re)connect: it carries the tab's guest id. */
   constructor(
@@ -32,6 +33,7 @@ export class ChatConnection {
 
   /** Starts hearing `roomId`; returns the function that stops. */
   watch(roomId: string, listener: RoomListener): () => void {
+    clearTimeout(this.idleTimer);
     let listeners = this.rooms.get(roomId);
     if (!listeners) {
       listeners = new Set();
@@ -49,7 +51,13 @@ export class ChatConnection {
       if (listeners.size > 0 || this.rooms.get(roomId) !== listeners) return;
       this.rooms.delete(roomId);
       this.send({ type: 'leave', roomId });
-      if (this.rooms.size === 0) this.disconnect();
+      if (this.rooms.size > 0) return;
+      // Closed a moment later rather than at once: a room watched again right
+      // away — a page swapping one chat for another, or React re-running an
+      // effect in development — keeps this socket instead of reconnecting.
+      this.idleTimer = setTimeout(() => {
+        if (this.rooms.size === 0) this.disconnect();
+      }, 0);
     };
   }
 

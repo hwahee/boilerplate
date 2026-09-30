@@ -84,7 +84,7 @@ describe('ChatConnection', () => {
     expect(b.frames).toEqual([{ type: 'joined', roomId: 'b' }]);
   });
 
-  test('leaves a room when it is let go, and closes after the last one', () => {
+  test('leaves a room when it is let go, and closes shortly after the last one', async () => {
     const stopA = connection.watch('a', recorder());
     const stopB = connection.watch('b', recorder());
     latest().open();
@@ -93,7 +93,17 @@ describe('ChatConnection', () => {
     expect(latest().sent.at(-1)).toEqual({ type: 'leave', roomId: 'a' });
     expect(latest().closed).toBe(false);
     stopB();
+    await Bun.sleep(5); // past the short grace period
     expect(latest().closed).toBe(true);
+  });
+
+  test('a room watched again right away keeps the same socket (e.g. StrictMode remount)', async () => {
+    const stop = connection.watch('a', recorder());
+    stop();
+    connection.watch('a', recorder());
+    await Bun.sleep(5);
+    expect(sockets).toHaveLength(1);
+    expect(latest().closed).toBe(false);
   });
 
   test('reconnect() swaps the socket at once and tells the rooms', () => {
