@@ -8,7 +8,13 @@ import type { Todo, TodoListQuery, TodoStatus } from '@shared/domain/todo';
 import { toUtcIso } from '@shared/time';
 
 import { sessionSql, type PostgresDb } from '../db/postgres';
-import type { AuditLogEntry, AuditLogRepository, DbSession, TodoRepository } from './types';
+import type {
+  AuditLogEntry,
+  AuditLogRepository,
+  DbSession,
+  TodoRepository,
+  UserRepository,
+} from './types';
 
 interface TodoRow {
   id: string;
@@ -108,6 +114,35 @@ export function createPostgresTodoRepository(db: PostgresDb): TodoRepository {
         DELETE FROM todos WHERE id = ${id} RETURNING id
       `;
       return rows.length > 0;
+    },
+  };
+}
+
+interface UserRow {
+  id: string;
+  display_name: string;
+  created_at: Date;
+}
+
+export function createPostgresUserRepository(db: PostgresDb): UserRepository {
+  return {
+    async findById(id, session) {
+      const sql = sessionSql(db, session);
+      const rows = await sql<UserRow[]>`
+        SELECT id, display_name, created_at FROM users WHERE id = ${id}
+      `;
+      const row = rows[0];
+      return row
+        ? { id: row.id, displayName: row.display_name, createdAt: toUtcIso(row.created_at) }
+        : null;
+    },
+
+    async insert(user, session) {
+      const sql = sessionSql(db, session);
+      await sql`
+        INSERT INTO users (id, display_name, created_at)
+        VALUES (${user.id}, ${user.displayName}, ${user.createdAt})
+      `;
     },
   };
 }
