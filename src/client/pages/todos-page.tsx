@@ -11,7 +11,7 @@
 import { createTodoValidator, type TodoListQuery, type TodoStatus } from '@shared/domain/todo';
 import { formatUtcInTimeZone } from '@shared/time';
 import { Plus, Trash2 } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { ApiRequestError } from '../api/http';
@@ -51,16 +51,14 @@ export function TodosPage() {
   const sortByParam = searchParams.get('sortBy');
   const sortBy: SortField = sortByParam === 'title' ? 'title' : 'createdAt';
 
-  const query = useMemo(
-    () => ({
-      page,
-      pageSize: PAGE_SIZE,
-      sortBy,
-      sortOrder: sortBy === 'title' ? ('asc' as const) : ('desc' as const),
-      ...(status === 'all' ? {} : { status }),
-    }),
-    [page, sortBy, status],
-  );
+  // A new object each render is fine: TanStack Query compares keys by content.
+  const query = {
+    page,
+    pageSize: PAGE_SIZE,
+    sortBy,
+    sortOrder: sortBy === 'title' ? ('asc' as const) : ('desc' as const),
+    ...(status === 'all' ? {} : { status }),
+  };
 
   const patchParams = (patch: Record<string, string | null>) => {
     setSearchParams((params) => {
