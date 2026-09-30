@@ -52,16 +52,18 @@ function fakeSocket(gateway: ChatGateway, guestId: string) {
   const data = gateway.handshake(new Request(`http://test/ws/chat?guestId=${guestId}`));
   if (data instanceof Response) throw new Error('handshake refused');
   const frames: ChatServerFrame[] = [];
-  const ws = {
-    data,
-    send: (text: string) => frames.push(JSON.parse(text) as ChatServerFrame),
-    close: () => undefined,
-  } as unknown as Bun.ServerWebSocket<ChatSocketData>;
-  return {
-    ws,
+  const socket = {
+    ws: {
+      data,
+      send: (text: string) => frames.push(JSON.parse(text) as ChatServerFrame),
+      close: (code?: number) => (socket.closedWith = code),
+    } as unknown as Bun.ServerWebSocket<ChatSocketData>,
     frames,
-    join: () => gateway.message(ws, JSON.stringify({ type: 'join', roomId: ROOM })),
+    closedWith: undefined as number | undefined,
+    join: () => gateway.message(socket.ws, JSON.stringify({ type: 'join', roomId: ROOM })),
+    leave: () => gateway.message(socket.ws, JSON.stringify({ type: 'leave', roomId: ROOM })),
   };
+  return socket;
 }
 
 test('a change that races a snapshot is sent after it, not lost under it', async () => {
@@ -114,4 +116,54 @@ test('connections that expired in a room are announced as departures', async () 
     roomId: ROOM,
     connectionId: 'crashed-instance-connection',
   });
+});
+
+test('a leave right behind a join is carried out after it: nobody is left in the room', async () => {
+  const presence = createMemoryPresenceStore();
+  const gateway = await startGateway(presence);
+
+  // A page that mounts and unmounts at once (React re-running an effect).
+  const socket = fakeSocket(gateway, 'aaaaaa');
+  const joining = socket.join();
+  const leaving = socket.leave();
+  await Promise.all([joining, leaving]);
+
+  expect(await presence.list(ROOM)).toEqual([]);
+  expect(socket.ws.data.rooms.size).toBe(0);
+});
+
+test('joining twice at once joins once, with one snapshot', async () => {
+  const gateway = await startGateway(createMemoryPresenceStore());
+
+  const socket = fakeSocket(gateway, 'aaaaaa');
+  await Promise.all([socket.join(), socket.join()]);
+
+  expect(socket.frames.filter((frame) => frame.type === 'joined')).toHaveLength(2);
+  expect(socket.frames.filter((frame) => frame.type === 'presence')).toHaveLength(1);
+});
+
+test('a socket closed while joining leaves nothing behind', async () => {
+  const presence = createMemoryPresenceStore();
+  const gateway = await startGateway(presence);
+
+  const socket = fakeSocket(gateway, 'aaaaaa');
+  const joining = socket.join();
+  await gateway.close(socket.ws);
+  await joining;
+
+  expect(await presence.list(ROOM)).toEqual([]);
+});
+
+test('a join that fails closes the socket, so the client reconnects and tries again', async () => {
+  const memory = createMemoryPresenceStore();
+  const gateway = await startGateway({
+    ...memory,
+    join: () => Promise.reject(new Error('presence is down')),
+  });
+
+  const socket = fakeSocket(gateway, 'aaaaaa');
+  await socket.join();
+
+  expect(socket.closedWith).toBe(1011);
+  expect(socket.frames.some((frame) => frame.type === 'joined')).toBe(false);
 });

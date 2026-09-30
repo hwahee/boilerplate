@@ -19,6 +19,7 @@
 import {
   chatClientFrameValidator,
   guestIdValidator,
+  type ChatClientFrame,
   type ChatMessage,
   type ChatParticipant,
   type ChatPresenceEntry,
@@ -48,6 +49,12 @@ export interface ChatSocketData {
    * applied on top of it rather than lost under it.
    */
   presencePending: Map<string, string[]>;
+  /**
+   * The socket's frames, carried out one at a time in the order they came: a
+   * `leave` right behind a `join` (a page mounting and unmounting at once)
+   * must find the room joined, not race the join and leave a ghost behind.
+   */
+  work: Promise<void>;
   closed: boolean;
 }
 
@@ -93,32 +100,27 @@ export class ChatGateway {
       guestId,
       rooms: new Set(),
       presencePending: new Map(),
+      work: Promise.resolve(),
       closed: false,
     };
   }
 
   async message(ws: ChatSocket, raw: string | Buffer): Promise<void> {
-    let frame;
+    let frame: ChatClientFrame;
     try {
       frame = chatClientFrameValidator.parse(JSON.parse(String(raw)));
     } catch {
       this.deps.log.warn('chat socket sent a malformed frame', { raw: String(raw).slice(0, 200) });
       return;
     }
-    try {
-      if (frame.type === 'join') await this.join(ws, frame.roomId);
-      else await this.leave(ws, frame.roomId);
-    } catch (error) {
-      this.deps.log.error('chat socket frame failed', {
-        type: frame.type,
-        roomId: frame.roomId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    ws.data.work = ws.data.work.then(() => this.carryOut(ws, frame));
+    await ws.data.work;
   }
 
   async close(ws: ChatSocket): Promise<void> {
     ws.data.closed = true;
+    // A frame in progress finishes first; a join sees `closed` and backs out.
+    await ws.data.work;
     try {
       await Promise.all([...ws.data.rooms].map((roomId) => this.leave(ws, roomId)));
     } catch (error) {
@@ -168,6 +170,23 @@ export class ChatGateway {
       await Promise.all([...sockets].map((ws) => this.close(ws)));
       for (const ws of sockets) ws.close(1001, 'server shutting down');
     };
+  }
+
+  /** Never rejects, so one failed frame does not stop the ones behind it. */
+  private async carryOut(ws: ChatSocket, frame: ChatClientFrame): Promise<void> {
+    try {
+      if (frame.type === 'join') await this.join(ws, frame.roomId);
+      else await this.leave(ws, frame.roomId);
+    } catch (error) {
+      this.deps.log.error('chat socket frame failed; closing the socket', {
+        type: frame.type,
+        roomId: frame.roomId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Half-joined is worse than not joined: the client reconnects with
+      // backoff and joins its rooms again, and the close handler cleans up.
+      ws.close(1011, 'chat frame failed');
+    }
   }
 
   private async join(ws: ChatSocket, roomId: string): Promise<void> {
