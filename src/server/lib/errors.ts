@@ -8,3 +8,11 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError';
   }
 }
+
+/** The operation needs a signed-in user and the request has none. */
+export class UnauthorizedError extends Error {
+  constructor() {
+    super('authentication required');
+    this.name = 'UnauthorizedError';
+  }
+}

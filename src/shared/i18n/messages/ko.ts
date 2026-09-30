@@ -69,6 +69,7 @@ export const ko: Record<MessageKey, string> = {
   'notFound.goHome': '홈으로 이동',
 
   'error.validation': '요청에 잘못된 데이터가 포함되어 있습니다.',
+  'error.unauthorized': '로그인이 필요합니다.',
   'error.notFound': '요청한 리소스를 찾을 수 없습니다.',
   'error.internal': '예기치 않은 오류가 발생했습니다. 다시 시도해 주세요.',
   'error.versionMismatch': '새 버전이 배포되었습니다. 페이지를 새로고침합니다.',
