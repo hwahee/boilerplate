@@ -38,9 +38,24 @@ for (const entrypoint of ['src/server/index.ts', 'scripts/migrate.ts']) {
     minify: true,
     sourcemap: 'linked',
     define,
+    // React Compiler (Bun's built-in, experimental): memoizes components in
+    // .tsx files at build time, so they do not hand-write memo / useMemo /
+    // useCallback for speed (CLAUDE.md). Only this build runs it — the dev
+    // server serves the same code uncompiled, which must therefore stay
+    // correct without it.
+    reactCompiler: true,
+    metafile: true,
   });
   if (!result.success) {
     for (const log of result.logs) console.error(log);
+    process.exit(1);
+  }
+  // Guard: compiled components import React's compiler runtime. Without it in
+  // the bundle, the compiler no longer reaches the client (bundled through
+  // the server's HTML import) and every component ships unmemoized.
+  const inputs = Object.keys(result.metafile?.inputs ?? {});
+  if (entrypoint === 'src/server/index.ts' && !inputs.some((i) => i.includes('compiler-runtime'))) {
+    console.error('The React Compiler did not run over the client bundle.');
     process.exit(1);
   }
 }
