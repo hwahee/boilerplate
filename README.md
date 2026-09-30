@@ -57,15 +57,14 @@ bun run dev               # 개발 서버 (서버 watch + 클라이언트 HMR) �
 
 DB 없이 바로 실행하려면 `.env`에서 `DB_DRIVER=memory`로 바꾸면 됩니다(테스트도 이 드라이버를 사용).
 
-| 명령                      | 설명                                                                         |
-| ------------------------- | ---------------------------------------------------------------------------- |
-| `bun run dev`             | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                                 |
-| `bun test`                | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행        |
-| `bun run check`           | prettier + eslint + tsc + knip + test 전체 게이트 (pre-push와 동일)          |
-| `bun run build`           | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)           |
-| `bun run start`           | 빌드 산출물 실행                                                             |
-| `bun run db:*`            | `db:up` / `db:migrate` / `db:seed` / `db:setup`                              |
-| `bun run compiler:report` | React Compiler가 컴파일하지 않은 클라이언트 컴포넌트·훅 목록 (`--all`: 전부) |
+| 명령            | 설명                                                                  |
+| --------------- | --------------------------------------------------------------------- |
+| `bun run dev`   | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                          |
+| `bun test`      | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행 |
+| `bun run check` | prettier + eslint + tsc + knip + test 전체 게이트 (pre-push와 동일)   |
+| `bun run build` | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)    |
+| `bun run start` | 빌드 산출물 실행                                                      |
+| `bun run db:*`  | `db:up` / `db:migrate` / `db:seed` / `db:setup`                       |
 
 ## 아키텍처 결정
 
