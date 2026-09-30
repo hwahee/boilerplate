@@ -41,6 +41,7 @@ if (config.serverRole === 'web' || config.serverRole === 'all') {
       ...app.routes,
       // SPA catch-all: every non-API path serves the client (index.html),
       // so client-side routes like /design-system deep-link correctly.
+      // Unknown /api/* paths never reach it — see routes/api-fallback.ts.
       '/*': homepage,
     },
     websocket: app.websocket,

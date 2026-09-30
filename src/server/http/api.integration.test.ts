@@ -258,4 +258,20 @@ describe('fallback', () => {
   test('unknown paths return 404', async () => {
     expect((await api('GET', '/definitely-not-a-route')).status).toBe(404);
   });
+
+  test('unknown API paths return the JSON 404 envelope, not the SPA', async () => {
+    const { status, body } = await api<{ error: { code: string; message: string } }>(
+      'GET',
+      '/api/definitely-not-a-route?lang=ko',
+    );
+    expect(status).toBe(404);
+    expect(body.error.code).toBe('NOT_FOUND');
+    expect(body.error.message).toBe('요청한 리소스를 찾을 수 없습니다.');
+  });
+
+  test('a method a known API path does not define also gets the JSON 404 envelope', async () => {
+    const { status, body } = await api<{ error: { code: string } }>('PUT', '/api/todos');
+    expect(status).toBe(404);
+    expect(body.error.code).toBe('NOT_FOUND');
+  });
 });
