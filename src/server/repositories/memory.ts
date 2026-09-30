@@ -20,20 +20,24 @@ import type {
   UnitOfWork,
 } from './types';
 
+/** Every table the store holds, i.e. its data fields. */
+type MemoryTables = Omit<MemoryStore, 'snapshot' | 'restore'>;
+
 export class MemoryStore {
   todos = new Map<string, Todo>();
   auditLogs: AuditLogEntry[] = [];
 
-  snapshot(): { todos: Map<string, Todo>; auditLogs: AuditLogEntry[] } {
-    return {
-      todos: new Map([...this.todos].map(([id, todo]) => [id, { ...todo }])),
-      auditLogs: this.auditLogs.map((entry) => ({ ...entry })),
-    };
+  /**
+   * Deep copy of every table. Deliberately not a per-table list: a table added
+   * above is covered by transaction rollback without touching this method, so
+   * it can never be the one table a failed transaction forgets to undo.
+   */
+  snapshot(): MemoryTables {
+    return structuredClone({ ...this });
   }
 
-  restore(snapshot: ReturnType<MemoryStore['snapshot']>): void {
-    this.todos = snapshot.todos;
-    this.auditLogs = snapshot.auditLogs;
+  restore(snapshot: MemoryTables): void {
+    Object.assign(this, snapshot);
   }
 }
 
