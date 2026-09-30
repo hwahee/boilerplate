@@ -51,6 +51,7 @@
 | 앱 셸         | `app.header`, `app.nav.todos`, `app.nav.design-system`, `app.controls.*`                |
 | 계정 (헤더)   | `app.account.form` / `.user-id` / `.sign-in`, `app.account.user` / `.sign-out`          |
 | Todos 생성    | `todos.create.form` / `.input` / `.submit` (+ `todos.create.input.error`)               |
+| Todos 게스트  | `todos.guest-hint` — 게스트에게 쓰기 대신 보이는 안내 (쓰기 UI는 회원에게만 렌더링)     |
 | Todos 목록    | `todos.list`, `todos.item.<id>`, `todos.item.<id>.toggle`, `todos.item.<id>.delete`     |
 | Todos 상태    | `todos.loading`, `todos.error`, `todos.error.retry`, `todos.empty`, `todos.total-count` |
 | 필터/정렬     | `todos.filter.status`, `todos.sort.by`                                                  |

@@ -12,6 +12,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useEffect } from 'react';
 
 import { authApi, todosApi, type TodoListQueryInput } from './endpoints';
+import { ApiRequestError } from './http';
 
 const todoKeys = {
   all: ['todos'] as const,
@@ -29,6 +30,21 @@ const authKeys = {
  */
 export function useMe() {
   return useQuery({ queryKey: authKeys.me, queryFn: () => authApi.me() });
+}
+
+/**
+ * Who the visitor is, for deciding what the UI offers — mirrors the server's
+ * `Caller` (src/server/auth/session.ts):
+ *   - `member`  — signed in
+ *   - `guest`   — sign-in exists but the visitor is not signed in
+ *   - `anyone`  — the server runs without sign-in, so there is no split
+ *   - `unknown` — `me` is still loading, or failed for another reason
+ */
+export function useCaller(): 'member' | 'guest' | 'anyone' | 'unknown' {
+  const me = useMe();
+  if (me.isSuccess) return me.data ? 'member' : 'guest';
+  if (me.error instanceof ApiRequestError && me.error.code === 'NOT_FOUND') return 'anyone';
+  return 'unknown';
 }
 
 /** Signs in by user id; the returned user becomes the cached `me` directly. */

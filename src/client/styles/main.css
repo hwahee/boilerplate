@@ -1033,6 +1033,11 @@ dialog.overlay[data-variant='sidebar'] .overlay__panel {
   margin-block: var(--space-4);
 }
 
+/* Takes the create form's place for guests, so it takes its spacing too. */
+.todo-guest-hint {
+  margin-block: var(--space-4);
+}
+
 .todo-create .field {
   flex: 1;
 }

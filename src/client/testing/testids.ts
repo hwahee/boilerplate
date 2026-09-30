@@ -30,6 +30,7 @@ export const TESTID = {
     createForm: 'todos.create.form',
     createInput: 'todos.create.input',
     createSubmit: 'todos.create.submit',
+    guestHint: 'todos.guest-hint',
     filterStatus: 'todos.filter.status',
     sortBy: 'todos.sort.by',
     list: 'todos.list',

@@ -30,6 +30,7 @@ export const ko: Record<MessageKey, string> = {
   'todos.description': '풀스택 전체를 관통하는 작은 데모 도메인입니다.',
   'todos.createLabel': '새 할 일 제목',
   'todos.createPlaceholder': '무엇을 해야 하나요?',
+  'todos.guestHint': '로그인하면 할 일을 추가하고, 완료 표시하고, 삭제할 수 있습니다.',
   'todos.createSubmit': '할 일 추가',
   'todos.empty': '아직 아무것도 없습니다. 위에서 첫 할 일을 추가해 보세요.',
   'todos.filterLabel': '상태로 필터',
