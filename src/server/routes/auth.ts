@@ -34,7 +34,12 @@ export function authRoutes(container: Container, deps: HttpDeps): AuthRoutes {
     '/api/auth/me': apiRoute<'/api/auth/me'>(
       {
         /** GET /api/auth/me → User | 401 */
-        GET: async (_req, ctx) => json(await container.authService().currentUser(ctx.userId)),
+        GET: async (_req, { caller }) =>
+          json(
+            await container
+              .authService()
+              .currentUser(caller.kind === 'member' ? caller.userId : undefined),
+          ),
       },
       deps,
     ),

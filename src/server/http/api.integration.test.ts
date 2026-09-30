@@ -21,8 +21,10 @@ let container: Container;
 let state: AppState;
 let server: Bun.Server<undefined>;
 let baseUrl: string;
+/** Session cookie of a signed-in member — writing todos needs one. */
+let memberCookie: string;
 
-beforeAll(() => {
+beforeAll(async () => {
   const config = loadServerConfig({
     APP_ENV: 'local',
     DB_DRIVER: 'memory',
@@ -35,6 +37,11 @@ beforeAll(() => {
   const app = buildApp(container, state);
   server = Bun.serve({ port: 0, ...app });
   baseUrl = String(server.url).replace(/\/$/, '');
+  const login = await api('POST', '/api/auth/dev-login', {
+    body: { userId: 'tester' },
+    as: 'guest',
+  });
+  memberCookie = cookieFrom(login.headers);
 });
 
 afterAll(async () => {
@@ -52,14 +59,19 @@ beforeEach(async () => {
   state.shuttingDown = false;
 });
 
+/**
+ * Calls the API as the signed-in member by default; `as: 'guest'` sends no
+ * session. An explicit `cookie` header wins over either.
+ */
 async function api<T = unknown>(
   method: string,
   path: string,
-  options: { body?: unknown; headers?: Record<string, string> } = {},
+  options: { body?: unknown; headers?: Record<string, string>; as?: 'member' | 'guest' } = {},
 ): Promise<{ status: number; body: T; headers: Headers }> {
   const response = await fetch(baseUrl + path, {
     method,
     headers: {
+      ...((options.as ?? 'member') === 'member' ? { cookie: memberCookie } : {}),
       ...(options.body !== undefined ? { 'content-type': 'application/json' } : {}),
       ...options.headers,
     },
@@ -138,7 +150,7 @@ describe('todos CRUD', () => {
   test('rejects malformed JSON as a validation error, not a 500', async () => {
     const response = await fetch(`${baseUrl}/api/todos`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', cookie: memberCookie },
       body: '{not json',
     });
     expect(response.status).toBe(400);
@@ -319,6 +331,7 @@ describe('auth (AUTH_DRIVER=dev)', () => {
     const { status, body } = await api<{ error: { code: string; message: string } }>(
       'GET',
       '/api/auth/me?lang=ko',
+      { as: 'guest' },
     );
     expect(status).toBe(401);
     expect(body.error).toMatchObject({ code: 'UNAUTHORIZED', message: '로그인이 필요합니다.' });
@@ -340,5 +353,56 @@ describe('auth (AUTH_DRIVER=dev)', () => {
     const config = loadServerConfig({ DB_DRIVER: 'memory', AUTH_DRIVER: 'none' });
     const app = buildApp(createContainer(config, { log: silentLogger }), state);
     expect(Object.keys(app.routes).filter((path) => path.startsWith('/api/auth'))).toEqual([]);
+  });
+});
+
+describe('todos: members write, guests only read (AUTH_DRIVER=dev)', () => {
+  test('a guest can list and read todos', async () => {
+    const created = await api<Todo>('POST', '/api/todos', { body: { title: 'Visible' } });
+    expect((await api('GET', '/api/todos', { as: 'guest' })).status).toBe(200);
+    expect((await api('GET', `/api/todos/${created.body.id}`, { as: 'guest' })).status).toBe(200);
+  });
+
+  test('a guest cannot create, update or delete — 401, and nothing changes', async () => {
+    const created = await api<Todo>('POST', '/api/todos', { body: { title: 'Keep me' } });
+    const id = created.body.id;
+
+    const attempts = [
+      await api<{ error: { code: string } }>('POST', '/api/todos', {
+        body: { title: 'Guest todo' },
+        as: 'guest',
+      }),
+      await api<{ error: { code: string } }>('PATCH', `/api/todos/${id}`, {
+        body: { status: 'done' },
+        as: 'guest',
+      }),
+      await api<{ error: { code: string } }>('DELETE', `/api/todos/${id}`, { as: 'guest' }),
+    ];
+    for (const { status, body } of attempts) {
+      expect(status).toBe(401);
+      expect(body.error.code).toBe('UNAUTHORIZED');
+    }
+
+    const list = await api<{ items: Todo[] }>('GET', '/api/todos');
+    expect(list.body.items.map((todo) => [todo.title, todo.status])).toEqual([['Keep me', 'open']]);
+  });
+});
+
+describe('todos without sign-in (AUTH_DRIVER=none)', () => {
+  test('there are no guests to turn away: anyone can write', async () => {
+    const config = loadServerConfig({ DB_DRIVER: 'memory', AUTH_DRIVER: 'none' });
+    const noAuth = createContainer(config, { log: silentLogger });
+    const noAuthServer = Bun.serve({ port: 0, ...buildApp(noAuth, { shuttingDown: false }) });
+    try {
+      const response = await fetch(new URL('/api/todos', noAuthServer.url), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title: 'No sign-in needed' }),
+      });
+      expect(response.status).toBe(201);
+    } finally {
+      await noAuthServer.stop(true);
+      await noAuth.dispose();
+    }
   });
 });

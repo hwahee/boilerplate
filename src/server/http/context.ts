@@ -14,14 +14,14 @@ import {
   type MessageParams,
 } from '@shared/i18n';
 
-import { readSessionUserId } from '../auth/session';
+import { readCaller, type Caller } from '../auth/session';
 import type { ServerConfig } from '../config';
 
 export interface RequestContext {
   locale: Locale;
   t(key: MessageKey, params?: MessageParams): string;
-  /** The signed-in user's id; `undefined` when signed out or AUTH_DRIVER=none. */
-  userId: string | undefined;
+  /** Who is calling — see `Caller` (src/server/auth/session.ts). */
+  caller: Caller;
 }
 
 export function createRequestContext(req: Request, config: ServerConfig): RequestContext {
@@ -32,6 +32,6 @@ export function createRequestContext(req: Request, config: ServerConfig): Reques
   return {
     locale,
     t: (key, params) => translate(locale, key, params),
-    userId: readSessionUserId(req, config),
+    caller: readCaller(req, config),
   };
 }
