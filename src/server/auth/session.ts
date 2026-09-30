@@ -34,7 +34,8 @@ export function readCaller(req: Request, config: Pick<ServerConfig, 'authDriver'
   // Empty is what a cleared cookie holds — signed out, not a user named ''.
   // The dev driver trusts the id as-is, just like its sign-in does, so an id
   // with no user row (e.g. after an in-memory restart) still counts as a
-  // member here, while `GET /api/auth/me` answers 401 for it.
+  // member here. `GET /api/auth/me` answers 401 for it and clears the cookie,
+  // and chat names such a visitor as a guest, as the page does.
   return userId ? { kind: 'member', userId } : { kind: 'guest' };
 }
 
