@@ -5,8 +5,13 @@ const STORAGE_KEY = 'app.chat.guest-id';
 /** Used when sessionStorage is unavailable (private mode, blocked storage). */
 let fallback: string | undefined;
 
+/**
+ * `getRandomValues`, not `randomUUID`: the latter exists only on secure pages
+ * (https, localhost), and a phone trying the dev server over the LAN is neither.
+ */
 function newGuestId(): string {
-  return crypto.randomUUID().replaceAll('-', '').slice(0, 6);
+  const bytes = crypto.getRandomValues(new Uint8Array(3));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**

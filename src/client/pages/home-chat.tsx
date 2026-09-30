@@ -19,7 +19,7 @@ import type { MessageKey, MessageParams } from '@shared/i18n';
 import { formatUtcInTimeZone } from '@shared/time';
 import { useMutation } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type UIEvent } from 'react';
 
 import { ApiRequestError } from '../api/http';
 import { useChatRoomActions, useChatRoomState } from '../chat/hooks';
@@ -33,6 +33,9 @@ const ROOM_ID = HOME_CHAT_ROOM.id;
 
 /** Names beyond this are summed up as "+N" — a big room would otherwise bury the box. */
 const PARTICIPANTS_SHOWN = 20;
+
+/** How close to the bottom of the log still counts as reading the newest message. */
+const FOLLOW_SLACK_PX = 40;
 
 const STATUS_TONES = {
   connecting: 'neutral',
@@ -104,13 +107,21 @@ function ChatLog() {
   const status = useChatRoomState(ROOM_ID, (room) => room.status);
   const { isMine } = useChatRoomActions(ROOM_ID);
 
-  // Keep the newest message in view.
+  // Keep the newest message in view while the reader is at the bottom.
+  // Scrolling up to read stops that until they scroll back down or send one.
   const logRef = useRef<HTMLOListElement>(null);
-  const lastSeq = messages.at(-1)?.seq;
+  const following = useRef(true);
+  const last = messages.at(-1);
+  const lastSeq = last?.seq;
+  const lastIsMine = last !== undefined && isMine(last);
   useEffect(() => {
     const log = logRef.current;
-    if (log) log.scrollTop = log.scrollHeight;
-  }, [lastSeq]);
+    if (log && (following.current || lastIsMine)) log.scrollTop = log.scrollHeight;
+  }, [lastSeq, lastIsMine]);
+  const onScroll = (event: UIEvent<HTMLOListElement>) => {
+    const log = event.currentTarget;
+    following.current = log.scrollHeight - log.scrollTop - log.clientHeight <= FOLLOW_SLACK_PX;
+  };
 
   if (messages.length === 0 && status === 'live') {
     return (
@@ -126,6 +137,7 @@ function ChatLog() {
       role="log"
       aria-label={t('chat.log')}
       aria-busy={status === 'connecting' || undefined}
+      onScroll={onScroll}
       data-testid={TESTID.home.chat.log}
     >
       {messages.map((message) => (
@@ -170,7 +182,10 @@ function ChatComposer() {
     event.preventDefault();
     const parsed = sendChatMessageValidator.safeParse({ text });
     if (!parsed.ok) return; // nothing worth sending yet
-    sendMessage.mutate(parsed.value.text, { onSuccess: () => setText('') });
+    sendMessage.mutate(parsed.value.text, {
+      // Whatever was typed while it was on its way stays.
+      onSuccess: () => setText((current) => (current === text ? '' : current)),
+    });
   };
 
   const sendError = sendMessage.isError
