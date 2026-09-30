@@ -2,7 +2,7 @@ import type { ChatMessage, ChatParticipant, ChatServerFrame } from '@shared/doma
 
 import type { chatApi } from '../api/endpoints';
 import type { ChatConnection } from './chat-connection';
-import { mergeMessages } from './messages';
+import { connectionsOf, mergeMessages, peopleIn } from './messages';
 
 /**
  *   - `connecting`   — joining, or fetching the backlog
@@ -24,14 +24,30 @@ interface ChatRoomDeps {
   connection: ChatConnection;
   api: Pick<typeof chatApi, 'history' | 'send'>;
   guestId: () => string;
+  /** When subscribers hear about changes; defaults to the next animation frame. */
+  schedule?: (flush: () => void) => void;
 }
 
 const CATCH_UP_RETRY_MS = 3000;
 
 /**
+ * Once per frame in a browser — however many messages arrive in between,
+ * the page draws once, and not at all while the tab is hidden. Elsewhere
+ * (tests, no DOM) as soon as possible.
+ */
+function nextFrame(flush: () => void): void {
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => flush());
+  else setTimeout(flush, 0);
+}
+
+/**
  * One room as the page sees it — framework-free, so any UI (React through
- * `useChatRoom`, or anything else) can draw it. Watching starts with the first
- * subscriber and stops with the last; the state stays for the next one.
+ * `useChatRoomState`, or anything else) can draw it. Watching starts with the
+ * first subscriber and stops with the last; the state stays for the next one.
+ *
+ * State changes as frames arrive, but subscribers hear about it at most once
+ * per frame, and only about parts that changed: a piece of state keeps its
+ * identity until its content changes, down to each message object.
  *
  * Joining order is what keeps the view whole: the socket joins first, and only
  * when the server answers `joined` (from then on every new message reaches us
@@ -49,6 +65,9 @@ export class ChatRoom {
    * is caught up (our own send, a frame racing `joined`) may sit after a hole.
    */
   private caughtUpTo: number | undefined;
+  /** Open connections in the room — `participants` folds them into people. */
+  private connections = new Map<string, ChatParticipant>();
+  private notifyScheduled = false;
 
   constructor(
     readonly roomId: string,
@@ -93,7 +112,16 @@ export class ChatRoom {
         this.update({ messages: mergeMessages(this.state.messages, [frame.message]) });
         break;
       case 'presence':
-        this.update({ participants: frame.participants });
+        this.connections = connectionsOf(frame.entries);
+        this.update({ participants: peopleIn(this.connections, this.state.participants) });
+        break;
+      case 'presence-add':
+        this.connections.set(frame.entry.connectionId, frame.entry.participant);
+        this.update({ participants: peopleIn(this.connections, this.state.participants) });
+        break;
+      case 'presence-remove':
+        if (!this.connections.delete(frame.connectionId)) break;
+        this.update({ participants: peopleIn(this.connections, this.state.participants) });
         break;
       case 'error':
         this.cancelCatchUp();
@@ -141,7 +169,16 @@ export class ChatRoom {
   }
 
   private update(patch: Partial<ChatRoomState>): void {
+    const changed = (Object.keys(patch) as (keyof ChatRoomState)[]).some(
+      (key) => patch[key] !== this.state[key],
+    );
+    if (!changed) return;
     this.state = { ...this.state, ...patch };
-    for (const onChange of this.subscribers) onChange();
+    if (this.notifyScheduled) return;
+    this.notifyScheduled = true;
+    (this.deps.schedule ?? nextFrame)(() => {
+      this.notifyScheduled = false;
+      for (const onChange of this.subscribers) onChange();
+    });
   }
 }

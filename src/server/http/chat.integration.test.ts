@@ -6,12 +6,13 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 
-import type {
-  ChatClientFrame,
-  ChatHistory,
-  ChatMessage,
-  ChatParticipant,
-  ChatServerFrame,
+import {
+  participantKey,
+  type ChatClientFrame,
+  type ChatHistory,
+  type ChatMessage,
+  type ChatParticipant,
+  type ChatServerFrame,
 } from '@shared/domain/chat';
 
 import { buildApp, type SocketData } from '../app';
@@ -86,16 +87,41 @@ const messagesPath = () => `/api/chat/rooms/${roomId}/messages`;
 /** Bun's WebSocket also takes headers; the DOM typing this project compiles with does not say so. */
 type BunWebSocket = new (url: URL, options: { headers: Record<string, string> }) => WebSocket;
 
-/** A /ws/chat client that buffers frames so tests can wait for the one they expect. */
+/**
+ * A /ws/chat client that buffers frames so tests can wait for the one they
+ * expect, and keeps who is in the room from the presence snapshot + changes.
+ */
 class TestSocket {
   private readonly frames: ChatServerFrame[] = [];
   private readonly waiters = new Set<() => void>();
+  /** Open connections in the joined room, as presence frames describe them. */
+  private readonly connections = new Map<string, ChatParticipant>();
 
   private constructor(private readonly ws: WebSocket) {
     ws.onmessage = (event) => {
-      this.frames.push(JSON.parse(String(event.data)) as ChatServerFrame);
+      const frame = JSON.parse(String(event.data)) as ChatServerFrame;
+      if (frame.type === 'presence') {
+        this.connections.clear();
+        for (const entry of frame.entries)
+          this.connections.set(entry.connectionId, entry.participant);
+      } else if (frame.type === 'presence-add') {
+        this.connections.set(frame.entry.connectionId, frame.entry.participant);
+      } else if (frame.type === 'presence-remove') {
+        this.connections.delete(frame.connectionId);
+      } else {
+        this.frames.push(frame);
+      }
       for (const wake of this.waiters) wake();
     };
+  }
+
+  /** One entry per person, as a client shows them. */
+  private people(): ChatParticipant[] {
+    const people = new Map<string, ChatParticipant>();
+    for (const participant of this.connections.values()) {
+      people.set(participantKey(participant), participant);
+    }
+    return [...people.values()];
   }
 
   static async open(as: { guestId?: string; cookie?: string }): Promise<TestSocket> {
@@ -119,11 +145,18 @@ class TestSocket {
 
   /** Resolves with (and consumes) the first frame, buffered or upcoming, that matches. */
   async next(matches: (frame: ChatServerFrame) => boolean): Promise<ChatServerFrame> {
+    return this.until(() => {
+      const index = this.frames.findIndex(matches);
+      return index >= 0 ? this.frames.splice(index, 1)[0] : undefined;
+    });
+  }
+
+  private async until<T>(found: () => T | undefined): Promise<T> {
     const deadline = Date.now() + 2000;
     for (;;) {
-      const index = this.frames.findIndex(matches);
-      if (index >= 0) return this.frames.splice(index, 1)[0]!;
-      if (Date.now() > deadline) throw new Error('timed out waiting for a chat frame');
+      const value = found();
+      if (value !== undefined) return value;
+      if (Date.now() > deadline) throw new Error('timed out waiting on the chat socket');
       await new Promise<void>((resolve) => {
         const wake = () => {
           this.waiters.delete(wake);
@@ -140,12 +173,12 @@ class TestSocket {
     await this.next((frame) => frame.type === 'joined' && frame.roomId === id);
   }
 
-  /** Waits for a presence update listing exactly `count` people. */
+  /** Waits until presence lists exactly `count` people, and returns them. */
   async presence(count: number): Promise<ChatParticipant[]> {
-    const frame = await this.next(
-      (candidate) => candidate.type === 'presence' && candidate.participants.length === count,
-    );
-    return frame.type === 'presence' ? frame.participants : [];
+    return this.until(() => {
+      const people = this.people();
+      return people.length === count ? people : undefined;
+    });
   }
 
   close(): void {
@@ -266,6 +299,8 @@ describe('chat over /ws/chat', () => {
     const everyone = await guest.presence(2);
     expect(everyone).toContainEqual({ kind: 'guest', guestId: GUEST_ID });
     expect(everyone).toContainEqual({ kind: 'member', userId: 'alice', displayName: 'alice' });
+    // A late joiner learns who was already there from its snapshot.
+    expect(await tab2.presence(2)).toHaveLength(2);
 
     tab1.close();
     tab2.send({ type: 'leave', roomId });

@@ -26,9 +26,15 @@ export interface PresenceEntry {
 export interface PresenceStore {
   join(entry: PresenceEntry): Promise<void>;
   leave(scope: string, connectionId: string): Promise<void>;
-  /** The info of every connection present in `scope` — one item per connection. */
-  list(scope: string): Promise<unknown[]>;
+  /** Every connection present in `scope` (expired ones left out). */
+  list(scope: string): Promise<Omit<PresenceEntry, 'scope'>[]>;
   /** Keeps these still-open connections from expiring. */
   refresh(entries: readonly PresenceEntry[]): Promise<void>;
+  /**
+   * Deletes the expired connections of `scope` and returns the ones THIS call
+   * deleted — so when several instances sweep at once, each departure is
+   * announced by exactly one of them.
+   */
+  sweep(scope: string): Promise<string[]>;
   close(): Promise<void>;
 }

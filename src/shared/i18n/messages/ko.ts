@@ -54,6 +54,7 @@ export const ko: Record<MessageKey, string> = {
   'chat.status.reconnecting': '다시 연결 중…',
   'chat.status.unavailable': '사용할 수 없음',
   'chat.participants': '접속 중 {count}명',
+  'chat.moreParticipants': '외 {count}명',
   'chat.guestName': '게스트 {id}',
   'chat.you': '나',
   'chat.log': '채팅 메시지',

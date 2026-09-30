@@ -42,12 +42,18 @@ let historyCalls: { after?: number }[];
 let historyReply: ChatMessage[];
 let sent: SendChatMessageInput[];
 let room: ChatRoom;
+/** Notifications the room scheduled — run by `flush()`, standing in for the next frame. */
+let scheduled: (() => void)[];
+const flush = () => {
+  for (const run of scheduled.splice(0)) run();
+};
 
 beforeEach(() => {
   connection = new FakeConnection();
   historyCalls = [];
   historyReply = [];
   sent = [];
+  scheduled = [];
   room = new ChatRoom('room', {
     connection: connection as unknown as ChatConnection,
     api: {
@@ -61,8 +67,12 @@ beforeEach(() => {
       },
     },
     guestId: () => 'a1b2c3',
+    schedule: (run) => scheduled.push(run),
   });
 });
+
+const ALICE = { kind: 'member', userId: 'alice', displayName: 'Alice' } as const;
+const GUEST = { kind: 'guest', guestId: 'a1b2c3' } as const;
 
 /** Lets the pending history fetch settle. */
 const settle = () => Bun.sleep(0);
@@ -91,10 +101,10 @@ describe('ChatRoom', () => {
     connection.frame({
       type: 'presence',
       roomId: 'room',
-      participants: [{ kind: 'guest', guestId: 'a1b2c3' }],
+      entries: [{ connectionId: 'c1', participant: GUEST }],
     });
     expect(room.getSnapshot().messages.map((m) => m.seq)).toEqual([1]);
-    expect(room.getSnapshot().participants).toHaveLength(1);
+    expect(room.getSnapshot().participants).toEqual([GUEST]);
 
     connection.frame({ type: 'error', roomId: 'room', code: 'NOT_FOUND' });
     expect(room.getSnapshot().status).toBe('unavailable');
@@ -152,11 +162,62 @@ describe('ChatRoom', () => {
     expect(room.getSnapshot().messages.map((m) => m.seq)).toEqual([99]);
   });
 
+  test('presence: a snapshot, then changes — one entry per person, however many tabs', () => {
+    room.subscribe(() => undefined);
+    connection.frame({
+      type: 'presence',
+      roomId: 'room',
+      entries: [
+        { connectionId: 'alice-tab-1', participant: ALICE },
+        { connectionId: 'guest-tab', participant: GUEST },
+      ],
+    });
+    const people = room.getSnapshot().participants;
+    expect(people).toEqual([ALICE, GUEST]);
+
+    // Alice opening and closing another tab is not news.
+    connection.frame({
+      type: 'presence-add',
+      roomId: 'room',
+      entry: { connectionId: 'alice-tab-2', participant: ALICE },
+    });
+    connection.frame({ type: 'presence-remove', roomId: 'room', connectionId: 'alice-tab-1' });
+    expect(room.getSnapshot().participants).toBe(people);
+
+    connection.frame({ type: 'presence-remove', roomId: 'room', connectionId: 'alice-tab-2' });
+    expect(room.getSnapshot().participants).toEqual([GUEST]);
+  });
+
+  test('tells subscribers once per frame, however many frames arrived', () => {
+    let changes = 0;
+    room.subscribe(() => (changes += 1));
+    for (const seq of [1, 2, 3]) connection.frame({ type: 'message', message: message(seq) });
+    expect(changes).toBe(0);
+    flush();
+    expect(changes).toBe(1);
+    expect(room.getSnapshot().messages.map((m) => m.seq)).toEqual([1, 2, 3]);
+  });
+
+  test('a message it already holds changes nothing, not even identities', () => {
+    let changes = 0;
+    room.subscribe(() => (changes += 1));
+    connection.frame({ type: 'message', message: message(1) });
+    flush();
+    const messages = room.getSnapshot().messages;
+
+    // Our own send comes back twice: as the POST answer and over the socket.
+    connection.frame({ type: 'message', message: message(1) });
+    flush();
+    expect(room.getSnapshot().messages).toBe(messages);
+    expect(changes).toBe(1);
+  });
+
   test('notifies subscribers, and stops watching after the last one leaves', () => {
     let changes = 0;
     const first = room.subscribe(() => (changes += 1));
     const second = room.subscribe(() => undefined);
     connection.frame({ type: 'message', message: message(1) });
+    flush();
     expect(changes).toBe(1);
 
     first();

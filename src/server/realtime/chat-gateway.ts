@@ -8,6 +8,10 @@
  * forwards them to the sockets it holds, so with PUBSUB_DRIVER=redis two
  * people on different instances still share a room.
  *
+ * Presence costs one frame per change, not the whole list: a socket that
+ * joins gets a snapshot of who is there, everyone gets each arrival and
+ * departure after that.
+ *
  * Sending is not part of the socket: it is `POST /api/chat/rooms/:roomId/messages`,
  * so it goes through the same validation, error envelope and sign-in reading
  * as every other write.
@@ -15,9 +19,9 @@
 import {
   chatClientFrameValidator,
   guestIdValidator,
-  participantKey,
   type ChatMessage,
   type ChatParticipant,
+  type ChatPresenceEntry,
   type ChatServerFrame,
 } from '@shared/domain/chat';
 
@@ -38,10 +42,21 @@ export interface ChatSocketData {
   /** Resolved on the first join, then the same in every room. */
   participant?: ChatParticipant;
   rooms: Set<string>;
+  /**
+   * Presence changes for a room this socket is still joining, held back until
+   * its snapshot has gone out — so a change that raced the snapshot is
+   * applied on top of it rather than lost under it.
+   */
+  presencePending: Map<string, string[]>;
   closed: boolean;
 }
 
 type ChatSocket = Bun.ServerWebSocket<ChatSocketData>;
+
+/** What travels on CHANNELS.chatPresence. */
+type PresenceChange = { roomId: string } & (
+  { type: 'add'; entry: ChatPresenceEntry } | { type: 'remove'; connectionId: string }
+);
 
 interface ChatGatewayDeps {
   config: ServerConfig;
@@ -49,6 +64,8 @@ interface ChatGatewayDeps {
   presence: PresenceStore;
   events: PubSub;
   log: Logger;
+  /** How often this instance re-affirms its connections and sweeps expired ones. */
+  presenceRefreshMs?: number;
 }
 
 export class ChatGateway {
@@ -75,6 +92,7 @@ export class ChatGateway {
       caller,
       guestId,
       rooms: new Set(),
+      presencePending: new Map(),
       closed: false,
     };
   }
@@ -127,9 +145,20 @@ export class ChatGateway {
     );
     const unsubscribePresence = await this.deps.events.subscribe(
       CHANNELS.chatPresence,
-      (payload) => void this.pushPresence((payload as { roomId: string }).roomId),
+      (payload) => {
+        const change = payload as PresenceChange;
+        this.broadcastPresence(
+          change.roomId,
+          change.type === 'add'
+            ? { type: 'presence-add', roomId: change.roomId, entry: change.entry }
+            : { type: 'presence-remove', roomId: change.roomId, connectionId: change.connectionId },
+        );
+      },
     );
-    const heartbeat = setInterval(() => void this.refreshPresence(), PRESENCE_REFRESH_MS);
+    const heartbeat = setInterval(
+      () => void this.heartbeat(),
+      this.deps.presenceRefreshMs ?? PRESENCE_REFRESH_MS,
+    );
 
     return async () => {
       clearInterval(heartbeat);
@@ -169,44 +198,44 @@ export class ChatGateway {
       this.localRooms.set(roomId, sockets);
     }
     sockets.add(ws);
-    await this.deps.presence.join(this.presenceEntry(ws, roomId, participant));
-    this.send(ws, { type: 'joined', roomId });
-    await this.deps.events.publish(CHANNELS.chatPresence, { roomId });
+    ws.data.presencePending.set(roomId, []);
+    try {
+      await this.deps.presence.join(this.presenceEntry(ws, roomId, participant));
+      this.send(ws, { type: 'joined', roomId });
+      const entry = { connectionId: ws.data.connectionId, participant };
+      await this.publishPresence({ roomId, type: 'add', entry });
+      const entries = (await this.deps.presence.list(roomId)).map(({ connectionId, info }) => ({
+        connectionId,
+        participant: info as ChatParticipant,
+      }));
+      if (ws.data.rooms.has(roomId)) this.send(ws, { type: 'presence', roomId, entries });
+    } finally {
+      const pending = ws.data.presencePending.get(roomId) ?? [];
+      ws.data.presencePending.delete(roomId);
+      if (ws.data.rooms.has(roomId)) for (const text of pending) ws.send(text);
+    }
   }
 
   private async leave(ws: ChatSocket, roomId: string): Promise<void> {
     if (!ws.data.rooms.delete(roomId)) return;
+    ws.data.presencePending.delete(roomId);
     const sockets = this.localRooms.get(roomId);
     sockets?.delete(ws);
     if (sockets?.size === 0) this.localRooms.delete(roomId);
     await this.deps.presence.leave(roomId, ws.data.connectionId);
-    await this.deps.events.publish(CHANNELS.chatPresence, { roomId });
+    await this.publishPresence({ roomId, type: 'remove', connectionId: ws.data.connectionId });
   }
 
-  /** Tells this instance's sockets in the room who is there now (one entry per person). */
-  private async pushPresence(roomId: string): Promise<void> {
-    if (!this.localRooms.has(roomId)) return; // nobody here to tell
-    try {
-      const participants = new Map<string, ChatParticipant>();
-      for (const info of await this.deps.presence.list(roomId)) {
-        const participant = info as ChatParticipant;
-        const key = participantKey(participant);
-        if (!participants.has(key)) participants.set(key, participant);
-      }
-      this.broadcast(roomId, {
-        type: 'presence',
-        roomId,
-        participants: [...participants.values()],
-      });
-    } catch (error) {
-      this.deps.log.warn('chat presence lookup failed', {
-        roomId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+  private async publishPresence(change: PresenceChange): Promise<void> {
+    await this.deps.events.publish(CHANNELS.chatPresence, change);
   }
 
-  private async refreshPresence(): Promise<void> {
+  /**
+   * Keeps this instance's connections from expiring, and announces the ones
+   * that did expire in its rooms — connections of an instance that died
+   * without saying goodbye.
+   */
+  private async heartbeat(): Promise<void> {
     const entries = [...this.localRooms].flatMap(([roomId, sockets]) =>
       [...sockets].flatMap((ws) =>
         ws.data.participant ? [this.presenceEntry(ws, roomId, ws.data.participant)] : [],
@@ -214,8 +243,13 @@ export class ChatGateway {
     );
     try {
       await this.deps.presence.refresh(entries);
+      for (const roomId of this.localRooms.keys()) {
+        for (const connectionId of await this.deps.presence.sweep(roomId)) {
+          await this.publishPresence({ roomId, type: 'remove', connectionId });
+        }
+      }
     } catch (error) {
-      this.deps.log.warn('chat presence refresh failed', {
+      this.deps.log.warn('chat presence heartbeat failed', {
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -232,6 +266,16 @@ export class ChatGateway {
   private broadcast(roomId: string, frame: ChatServerFrame): void {
     const text = JSON.stringify(frame);
     for (const ws of this.localRooms.get(roomId) ?? []) ws.send(text);
+  }
+
+  /** Like `broadcast`, but held back for sockets whose snapshot has not gone out yet. */
+  private broadcastPresence(roomId: string, frame: ChatServerFrame): void {
+    const text = JSON.stringify(frame);
+    for (const ws of this.localRooms.get(roomId) ?? []) {
+      const pending = ws.data.presencePending.get(roomId);
+      if (pending) pending.push(text);
+      else ws.send(text);
+    }
   }
 
   private send(ws: ChatSocket, frame: ChatServerFrame): void {

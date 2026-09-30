@@ -1,52 +1,179 @@
 /**
  * The home page's chat box — one way to draw a room. Everything about the room
  * itself (joining, the backlog, live messages, who is here, sending,
- * reconnecting) comes from the chat core's `useChatRoom`; another feature can
- * draw the same kind of room entirely differently.
+ * reconnecting) comes from the chat core (src/client/chat); another feature
+ * can draw the same kind of room entirely differently.
+ *
+ * The box is split so that each part holds only the state it draws: the
+ * frame never re-renders from chat traffic, typing redraws only the composer,
+ * a person arriving redraws only the participant list, and a new message
+ * adds one row to the log — rows already drawn are left alone.
  */
-import type { ChatParticipant } from '@shared/domain/chat';
+import type { ChatMessage, ChatParticipant } from '@shared/domain/chat';
 import { participantKey, sendChatMessageValidator } from '@shared/domain/chat';
 import { HOME_CHAT_ROOM } from '@shared/domain/home-chat';
+import type { MessageKey, MessageParams } from '@shared/i18n';
 import { formatUtcInTimeZone } from '@shared/time';
 import { useMutation } from '@tanstack/react-query';
 import { Send } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { memo, useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ApiRequestError } from '../api/http';
-import { useChatRoom, type UseChatRoom } from '../chat/use-chat-room';
+import { useChatRoomActions, useChatRoomState } from '../chat/hooks';
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { TextField } from '../ui/text-field';
 
+const ROOM_ID = HOME_CHAT_ROOM.id;
+
+/** Names beyond this are summed up as "+N" — a big room would otherwise bury the box. */
+const PARTICIPANTS_SHOWN = 20;
+
 const STATUS_TONES = {
   connecting: 'neutral',
   live: 'success',
   reconnecting: 'warning',
   unavailable: 'danger',
-} as const satisfies Record<UseChatRoom['status'], string>;
+} as const;
+
+type Translate = (key: MessageKey, params?: MessageParams) => string;
+
+function nameOf(participant: ChatParticipant, t: Translate): string {
+  return participant.kind === 'member'
+    ? participant.displayName
+    : t('chat.guestName', { id: participant.guestId });
+}
 
 export function HomeChat() {
-  const { t, locale } = useI18n();
-  const room = useChatRoom(HOME_CHAT_ROOM.id);
-  const sendMessage = useMutation({ mutationFn: (text: string) => room.send(text) });
+  const { t } = useI18n();
+  return (
+    <section
+      className="card chat-panel"
+      aria-labelledby="home-chat-heading"
+      data-testid={TESTID.home.chat.panel}
+    >
+      <header className="chat-panel__header">
+        <h2 id="home-chat-heading">{t('chat.title')}</h2>
+        <ChatStatus />
+      </header>
+      <p className="muted chat-panel__description">{t('chat.description')}</p>
+      <ChatParticipants />
+      <ChatLog />
+      <ChatComposer />
+    </section>
+  );
+}
 
-  // The only local state: the uncommitted message.
-  const [text, setText] = useState('');
+function ChatStatus() {
+  const { t } = useI18n();
+  const status = useChatRoomState(ROOM_ID, (room) => room.status);
+  return (
+    <span role="status">
+      <Badge tone={STATUS_TONES[status]} testId={TESTID.home.chat.status}>
+        {t(`chat.status.${status}`)}
+      </Badge>
+    </span>
+  );
+}
+
+function ChatParticipants() {
+  const { t } = useI18n();
+  const participants = useChatRoomState(ROOM_ID, (room) => room.participants);
+  const hidden = participants.length - PARTICIPANTS_SHOWN;
+  return (
+    <div className="chat-participants" data-testid={TESTID.home.chat.participants}>
+      <span className="muted">{t('chat.participants', { count: participants.length })}</span>
+      <ul>
+        {participants.slice(0, PARTICIPANTS_SHOWN).map((participant) => (
+          <li key={participantKey(participant)}>{nameOf(participant, t)}</li>
+        ))}
+        {hidden > 0 && <li>{t('chat.moreParticipants', { count: hidden })}</li>}
+      </ul>
+    </div>
+  );
+}
+
+function ChatLog() {
+  const { t } = useI18n();
+  const messages = useChatRoomState(ROOM_ID, (room) => room.messages);
+  const status = useChatRoomState(ROOM_ID, (room) => room.status);
+  const { isMine } = useChatRoomActions(ROOM_ID);
 
   // Keep the newest message in view.
   const logRef = useRef<HTMLOListElement>(null);
-  const lastSeq = room.messages.at(-1)?.seq;
+  const lastSeq = messages.at(-1)?.seq;
   useEffect(() => {
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
   }, [lastSeq]);
 
-  const nameOf = (participant: ChatParticipant) =>
-    participant.kind === 'member'
-      ? participant.displayName
-      : t('chat.guestName', { id: participant.guestId });
+  if (messages.length === 0 && status === 'live') {
+    return (
+      <p className="chat-empty muted" data-testid={TESTID.home.chat.empty}>
+        {t('chat.empty')}
+      </p>
+    );
+  }
+  return (
+    <ol
+      ref={logRef}
+      className="chat-log"
+      role="log"
+      aria-label={t('chat.log')}
+      aria-busy={status === 'connecting' || undefined}
+      data-testid={TESTID.home.chat.log}
+    >
+      {messages.map((message) => (
+        <ChatMessageRow key={message.seq} message={message} mine={isMine(message)} />
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * A message never changes, and the chat core hands out the same object for
+ * it every time — so a drawn row only needs drawing again when the language
+ * changes (through `useI18n`) or when it stops or starts being "mine" (a
+ * sign-in or sign-out). `memo` is what tells React that.
+ */
+const ChatMessageRow = memo(function ChatMessageRow({
+  message,
+  mine,
+}: {
+  message: ChatMessage;
+  mine: boolean;
+}) {
+  const { t, locale } = useI18n();
+  return (
+    <li
+      className={mine ? 'chat-message chat-message--mine' : 'chat-message'}
+      data-testid={TESTID.home.chat.message(message.seq)}
+    >
+      <div className="chat-message__meta">
+        <span className="chat-message__author">
+          {nameOf(message.author, t)}
+          {mine && ` (${t('chat.you')})`}
+        </span>
+        {/* Boundary time-zone conversion: UTC → viewer's zone. */}
+        <time className="muted" dateTime={message.createdAt}>
+          {formatUtcInTimeZone(message.createdAt, { locale })}
+        </time>
+      </div>
+      <p className="chat-message__text">{message.text}</p>
+    </li>
+  );
+});
+
+function ChatComposer() {
+  const { t } = useI18n();
+  const unavailable = useChatRoomState(ROOM_ID, (room) => room.status === 'unavailable');
+  const { send } = useChatRoomActions(ROOM_ID);
+  const sendMessage = useMutation({ mutationFn: send });
+
+  // The only local state: the uncommitted message.
+  const [text, setText] = useState('');
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -62,95 +189,32 @@ export function HomeChat() {
     : undefined;
 
   return (
-    <section
-      className="card chat-panel"
-      aria-labelledby="home-chat-heading"
-      data-testid={TESTID.home.chat.panel}
+    <form
+      className="chat-compose"
+      onSubmit={submit}
+      aria-label={t('chat.send')}
+      data-testid={TESTID.home.chat.form}
     >
-      <header className="chat-panel__header">
-        <h2 id="home-chat-heading">{t('chat.title')}</h2>
-        <span role="status">
-          <Badge tone={STATUS_TONES[room.status]} testId={TESTID.home.chat.status}>
-            {t(`chat.status.${room.status}`)}
-          </Badge>
-        </span>
-      </header>
-      <p className="muted chat-panel__description">{t('chat.description')}</p>
-
-      <div className="chat-participants" data-testid={TESTID.home.chat.participants}>
-        <span className="muted">{t('chat.participants', { count: room.participants.length })}</span>
-        <ul>
-          {room.participants.map((participant) => (
-            <li key={participantKey(participant)}>{nameOf(participant)}</li>
-          ))}
-        </ul>
-      </div>
-
-      {room.messages.length === 0 && room.status === 'live' ? (
-        <p className="chat-empty muted" data-testid={TESTID.home.chat.empty}>
-          {t('chat.empty')}
-        </p>
-      ) : (
-        <ol
-          ref={logRef}
-          className="chat-log"
-          role="log"
-          aria-label={t('chat.log')}
-          aria-busy={room.status === 'connecting' || undefined}
-          data-testid={TESTID.home.chat.log}
-        >
-          {room.messages.map((message) => {
-            const mine = room.isMine(message);
-            return (
-              <li
-                key={message.seq}
-                className={mine ? 'chat-message chat-message--mine' : 'chat-message'}
-                data-testid={TESTID.home.chat.message(message.seq)}
-              >
-                <div className="chat-message__meta">
-                  <span className="chat-message__author">
-                    {nameOf(message.author)}
-                    {mine && ` (${t('chat.you')})`}
-                  </span>
-                  {/* Boundary time-zone conversion: UTC → viewer's zone. */}
-                  <time className="muted" dateTime={message.createdAt}>
-                    {formatUtcInTimeZone(message.createdAt, { locale })}
-                  </time>
-                </div>
-                <p className="chat-message__text">{message.text}</p>
-              </li>
-            );
-          })}
-        </ol>
-      )}
-
-      <form
-        className="chat-compose"
-        onSubmit={submit}
-        aria-label={t('chat.send')}
-        data-testid={TESTID.home.chat.form}
+      <TextField
+        label={t('chat.inputLabel')}
+        hideLabel
+        placeholder={t('chat.inputPlaceholder')}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        error={sendError}
+        maxLength={1000}
+        autoComplete="off"
+        testId={TESTID.home.chat.input}
+      />
+      <Button
+        type="submit"
+        loading={sendMessage.isPending}
+        disabled={unavailable || sendMessage.isPending}
+        testId={TESTID.home.chat.send}
       >
-        <TextField
-          label={t('chat.inputLabel')}
-          hideLabel
-          placeholder={t('chat.inputPlaceholder')}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          error={sendError}
-          maxLength={1000}
-          autoComplete="off"
-          testId={TESTID.home.chat.input}
-        />
-        <Button
-          type="submit"
-          loading={sendMessage.isPending}
-          disabled={room.status === 'unavailable' || sendMessage.isPending}
-          testId={TESTID.home.chat.send}
-        >
-          <Send aria-hidden size="1em" />
-          {t('chat.send')}
-        </Button>
-      </form>
-    </section>
+        <Send aria-hidden size="1em" />
+        {t('chat.send')}
+      </Button>
+    </form>
   );
 }

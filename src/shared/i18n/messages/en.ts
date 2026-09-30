@@ -58,6 +58,7 @@ export const en = {
   'chat.status.reconnecting': 'Reconnecting…',
   'chat.status.unavailable': 'Unavailable',
   'chat.participants': '{count} here',
+  'chat.moreParticipants': '+{count} more',
   'chat.guestName': 'Guest {id}',
   'chat.you': 'you',
   'chat.log': 'Chat messages',

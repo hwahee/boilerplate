@@ -139,7 +139,7 @@ export const authApi = {
 /**
  * Chat rooms — the HTTP half: catching up and sending. New messages and who
  * is in a room arrive over the `/ws/chat` socket instead, which the chat core
- * (src/client/chat) manages; features use its `useChatRoom` hook rather than
+ * (src/client/chat) manages; features use its hooks (`useChatRoomState`, `useChatRoomActions`) rather than
  * calling these directly.
  */
 export const chatApi = {

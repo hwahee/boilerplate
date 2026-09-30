@@ -130,11 +130,29 @@ export const chatClientFrameValidator = toValidator(
 export type ChatClientFrame = Infer<typeof chatClientFrameValidator>;
 
 /** Server → client. */
+/**
+ * One open connection in a room. Presence travels per connection — a person
+ * with two tabs open has two — and clients fold it into one entry per person
+ * (`participantKey`), so nobody has to know whether a leaving tab was the
+ * person's last.
+ */
+export interface ChatPresenceEntry {
+  connectionId: string;
+  participant: ChatParticipant;
+}
+
+/**
+ * Server → client. Presence is a snapshot for the joiner, then changes only:
+ * resending the whole list to everyone on every arrival would grow with the
+ * cube of the room's size.
+ */
 export type ChatServerFrame =
   /** The socket now receives the room's messages; fetch the history from here on. */
   | { type: 'joined'; roomId: string }
   | { type: 'message'; message: ChatMessage }
-  /** Everyone in the room right now, sent whenever someone arrives or leaves. */
-  | { type: 'presence'; roomId: string; participants: ChatParticipant[] }
+  /** Who is in the room, sent once to the socket that just joined; changes follow. */
+  | { type: 'presence'; roomId: string; entries: ChatPresenceEntry[] }
+  | { type: 'presence-add'; roomId: string; entry: ChatPresenceEntry }
+  | { type: 'presence-remove'; roomId: string; connectionId: string }
   /** Joining failed: there is no room with this id. */
   | { type: 'error'; roomId: string; code: 'NOT_FOUND' };

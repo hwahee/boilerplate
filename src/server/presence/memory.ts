@@ -29,12 +29,19 @@ export function createMemoryPresenceStore(): PresenceStore {
     async list(scope) {
       const connections = scopes.get(scope);
       return Promise.resolve(
-        [...(connections?.values() ?? [])].map((info): unknown => JSON.parse(info)),
+        [...(connections ?? [])].map(([connectionId, info]) => ({
+          connectionId,
+          info: JSON.parse(info) as unknown,
+        })),
       );
     },
 
     async refresh() {
       return Promise.resolve();
+    },
+
+    async sweep() {
+      return Promise.resolve([]);
     },
 
     async close() {
