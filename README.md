@@ -19,15 +19,18 @@ src/
 │   ├── repositories/# 영속성 계약 + postgres/in-memory 구현
 │   ├── db/          # Bun 내장 SQL 드라이버, 마이그레이션 러너
 │   ├── pubsub/      # 인스턴스 간 통신 (memory/redis 드라이버)
+│   ├── presence/    # 누가 어디에 접속해 있나 (memory/redis 드라이버, 채팅 접속자 목록)
+│   ├── realtime/    # 채팅 WebSocket 게이트웨이 (/ws/chat)
 │   └── container.ts # 컴포지션 루트 — 프로세스당 싱글톤 관리
 └── client/          # React SPA
     ├── api/         # ★ 모든 API가 endpoints.ts 한 곳에 문서화되어 모임
     ├── auth/        # 헤더의 로그인/로그아웃 컨트롤
+    ├── chat/        # 채팅 코어 — 소켓·방 상태·useChatRoom (UI 없음)
     ├── ui/          # 디자인 시스템 컴포넌트
     ├── styles/      # 디자인 토큰 (라이트/다크 × 디자인 A/B)
     ├── theme/ i18n/ # 테마·로케일 컨텍스트
     ├── testing/     # data-testid 레지스트리 (docs/ui-automation.md 참고)
-    └── pages/       # Todos(데모), Design System, NotFound
+    └── pages/       # Home(Todos + 채팅), Design System, NotFound
 ```
 
 ## 요구 사항
@@ -122,7 +125,8 @@ DB 없이 바로 실행하려면 `.env`에서 `DB_DRIVER=memory`로 바꾸면 �
 - **싱글톤**: 컨테이너(`src/server/container.ts`)에서 resolve되는 모든 서비스는 프로세스당
   싱글톤(lazy + memoized)입니다. 새로 싱글톤이 필요하면 같은 방식으로 등록하면 됩니다.
 - **WebSocket**: `/ws`로 todo 변경 이벤트를 push합니다. 브리지가 pub/sub을 경유하므로
-  redis 드라이버에서는 다른 인스턴스에 붙은 소켓에도 팬아웃됩니다.
+  redis 드라이버에서는 다른 인스턴스에 붙은 소켓에도 팬아웃됩니다. 채팅은 별도 소켓
+  `/ws/chat`을 씁니다(아래 [채팅](#채팅)).
 
 ### Graceful shutdown & 롤링 배포 버전 스큐
 
@@ -168,12 +172,45 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
   회원 전용 행동은 핸들러 첫 줄의 `requireMember(ctx.caller)`로 선언하며, 게스트면 로컬라이즈된
   401 `UNAUTHORIZED`가 됩니다. Todos는 저장되는 데이터이므로 생성·수정·삭제가 회원 전용이고,
   화면도 게스트에게는 쓰기 UI 대신 안내를 보여 줍니다. 게스트 상태는 서버가 아닌 탭 안에 두므로
-  게스트 식별자는 없습니다.
+  게스트 식별자는 없습니다. **예외는 채팅**입니다: 게스트도 메시지를 보내고, 탭이 만든 `guestId`로
+  표시됩니다(서버는 이를 신원 증명으로 쓰지 않음).
 - **쿠키**: httpOnly(페이지 스크립트가 못 읽음) + `SameSite=Lax`, **same-origin 전제**입니다. CORS에서
   `Access-Control-Allow-Credentials`를 켜지 않으므로 `CORS_ORIGINS`의 교차 출처 호출자에게는
   쿠키가 전달되지 않습니다.
 - **아직 없는 것**: todos와 사용자의 연결(소유자 — 지금은 회원 모두가 한 목록을 함께 씀), 감사
   로그의 행위자, 서명된 쿠키, 외부 로그인.
+
+### 채팅
+
+채팅은 어떤 기능에든 **붙이는** 시스템입니다. 방이 어느 기능에 붙어 있는지는 채팅이 모르고,
+저장·번호 매기기·실시간 전달·접속자 목록·재연결은 모든 방에서 똑같이 동작합니다. 붙이는 쪽이
+정하는 것은 방 id와 정책뿐이고, 화면은 붙이는 곳마다 다르게 그려도 됩니다.
+
+- **붙이는 법**
+  - 서버: 누가 들어오기 전에 방을 엽니다 — `container.chatService().openRoom({ id, policy })`.
+    다시 열면 정책만 갱신되므로 부팅마다 불러도 됩니다. id는 `inquiry.42`처럼 기능 이름으로 구분합니다.
+  - 클라이언트: `useChatRoom(roomId)` → `messages`, `participants`, `status`, `send(text)`, `isMine(message)`.
+  - 화면: 붙이는 쪽이 직접 그립니다. 예시는 홈 페이지의 채팅 상자(`src/client/pages/home-chat.tsx`,
+    방은 `src/shared/domain/home-chat.ts`)입니다.
+- **방 정책** (`ChatRoomPolicy`, 방마다 다름): `retentionMs`는 메시지를 얼마나 보존할지(`null` = 방이
+  있는 동안 계속), `backlog`는 입장 직후 보여 줄 지난 채팅(최근 `maxCount`개, `maxAgeMs`보다 오래된 것은
+  제외)입니다. 예: 문의는 오래 보존, 게임 방은 잠깐만. 보존 기한이 지난 메시지는 워커가 1분마다 지우고,
+  지우기 전에도 조회에서는 빠집니다.
+- **흐름**: 전송은 `POST /api/chat/rooms/:roomId/messages`(검증·에러 형식·i18n을 그대로 씀), 수신은
+  탭당 소켓 하나(`/ws/chat`)로 여러 방을 `join`/`leave`합니다. 메시지에는 방 안에서 1씩 늘어나는
+  번호(`seq`)가 붙습니다. 입장할 때는 소켓 가입(`joined`)이 끝난 뒤 지난 채팅을 불러와 둘을 번호로
+  합치므로 빠지는 메시지가 없고, 다시 연결되면 `?after=<마지막 seq>`로 놓친 것만 받습니다. 이 조회는
+  새 메시지가 계속 쌓이므로 page/pageSize 규약 대신 커서(`after`)를 씁니다.
+- **회원과 게스트**: 채팅은 게스트도 회원과 똑같이 보냅니다(아래 인증 절의 예외). 게스트는 탭이 만든
+  `guestId`(6자리, `sessionStorage`)로 표시되며 새로고침하면 유지되고 새 탭이나 재방문이면 새
+  게스트입니다. 소켓은 연결할 때 신원을 읽으므로 로그인·로그아웃하면 클라이언트가 소켓을 새로 엽니다.
+- **접속자 목록과 수평 확장**: 메시지(`chat.messages`)와 입퇴장 알림(`chat.presence`)은 pub/sub으로
+  모든 인스턴스에 퍼지고, 각 인스턴스가 자기 소켓에 전달합니다. 접속자 목록은 `PUBSUB_DRIVER`를 따라
+  memory 또는 Redis 해시(`presence:<방 id>`)에 둡니다. 죽은 인스턴스는 퇴장을 알릴 수 없으므로 항목은
+  60초 뒤 만료되고 살아 있는 인스턴스가 20초마다 갱신합니다. 정상 종료 때는 그 인스턴스의 소켓을
+  목록에서 바로 빼고 닫아서 클라이언트가 다른 인스턴스로 다시 붙게 합니다.
+- **아직 없는 것**: 비공개(참여자만 읽는) 방과 운영자 역할, 입력 중·읽음 표시, 메시지 수정·삭제,
+  도배 제한, 지난 채팅 더 불러오기.
 
 ### i18n
 
@@ -229,11 +266,15 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 
 ## 테스트 전략
 
-- **단위**: 비즈니스 로직(`TodoService`, `AuthService`) — 트랜잭션 롤백, 이벤트 발행,
+- **단위**: 비즈니스 로직(`TodoService`, `AuthService`, `ChatService` — 방별 번호, 지난 채팅의 개수·나이·
+  보존 기한, 보존 기한 정리) — 트랜잭션 롤백, 이벤트 발행,
   성공/실패 케이스. 설정 가드(`AUTH_DRIVER=dev` × 운영)와 세션 쿠키 해석도 단위로 검증합니다.
   라우트가 아직 던지지 않는 도메인 에러의 HTTP 매핑(401)은 `respond.test.ts`에서 검증합니다.
 - **통합**: 실제 앱을 임시 포트에 띄워 HTTP로 검증 — CRUD, 페이지네이션/정렬/필터,
   검증 실패(400)와 로컬라이즈된 메시지, 404(없는 API 경로·메서드 포함), 버전 스큐(409),
   CORS 허용/거부, 헬스체크, 로그인 → `me` 200 → 로그아웃 → `me` 401, 게스트의 todos 쓰기 401
   (`none`에서는 허용).
+- **채팅**: HTTP(전송·지난 채팅·`after`)와 실제 WebSocket(가입, 실시간 수신, 접속자 목록과 중복 제거,
+  퇴장, 없는 방)을 통합으로, 클라이언트 코어(소켓 공유·재연결, 번호 합치기와 빈틈 처리, 방 상태)를
+  가짜 소켓으로 검증합니다. presence 계약 테스트는 `REDIS_URL`이 있으면 Redis 드라이버에도 돕니다.
 - 전부 in-memory 드라이버로 돌므로 **`bun test` 하나로, 외부 환경 없이** 실행됩니다.
