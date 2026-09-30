@@ -11,6 +11,7 @@
  * fine for tests and local development, never used in production.
  */
 import type { Todo, TodoListQuery } from '@shared/domain/todo';
+import type { User } from '@shared/domain/user';
 
 import type {
   AuditLogEntry,
@@ -18,6 +19,7 @@ import type {
   DbSession,
   TodoRepository,
   UnitOfWork,
+  UserRepository,
 } from './types';
 
 /** Every table the store holds, i.e. its data fields. */
@@ -25,6 +27,7 @@ type MemoryTables = Omit<MemoryStore, 'snapshot' | 'restore'>;
 
 export class MemoryStore {
   todos = new Map<string, Todo>();
+  users = new Map<string, User>();
   auditLogs: AuditLogEntry[] = [];
 
   /**
@@ -102,6 +105,20 @@ export function createMemoryTodoRepository(store: MemoryStore): TodoRepository {
 
     async deleteById(id) {
       return Promise.resolve(store.todos.delete(id));
+    },
+  };
+}
+
+export function createMemoryUserRepository(store: MemoryStore): UserRepository {
+  return {
+    async findById(id) {
+      const user = store.users.get(id);
+      return Promise.resolve(user ? { ...user } : null);
+    },
+
+    async insert(user) {
+      store.users.set(user.id, { ...user });
+      return Promise.resolve();
     },
   };
 }

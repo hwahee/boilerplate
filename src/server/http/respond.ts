@@ -74,7 +74,7 @@ export function apiRoute<P extends string>(
   const wrap =
     (handler: ApiHandler<P>) =>
     async (req: Bun.BunRequest<P>): Promise<Response> => {
-      const ctx = createRequestContext(req);
+      const ctx = createRequestContext(req, deps.config);
       let response: Response;
       try {
         response = checkVersion(req, ctx) ?? (await handler(req, ctx));

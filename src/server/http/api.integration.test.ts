@@ -7,6 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:tes
 
 import { VERSION_HEADER } from '@shared/api/version';
 import type { Todo } from '@shared/domain/todo';
+import type { User } from '@shared/domain/user';
 
 import { buildApp } from '../app';
 import { loadServerConfig } from '../config';
@@ -27,6 +28,7 @@ beforeAll(() => {
     DB_DRIVER: 'memory',
     PUBSUB_DRIVER: 'memory',
     CORS_ORIGINS: ALLOWED_ORIGIN,
+    AUTH_DRIVER: 'dev',
   });
   container = createContainer(config, { log: silentLogger });
   state = { shuttingDown: false };
@@ -273,5 +275,70 @@ describe('fallback', () => {
     const { status, body } = await api<{ error: { code: string } }>('PUT', '/api/todos');
     expect(status).toBe(404);
     expect(body.error.code).toBe('NOT_FOUND');
+  });
+});
+
+/** The `name=value` pair a response's Set-Cookie carries, ready to send back. */
+function cookieFrom(headers: Headers): string {
+  return (headers.get('set-cookie') ?? '').split(';')[0] ?? '';
+}
+
+describe('auth (AUTH_DRIVER=dev)', () => {
+  test('sign in → me 200 → sign out → me 401', async () => {
+    const login = await api<User>('POST', '/api/auth/dev-login', { body: { userId: 'alice' } });
+    expect(login.status).toBe(200);
+    expect(login.body).toMatchObject({ id: 'alice', displayName: 'alice' });
+    expect(login.body.createdAt).toMatch(/Z$/); // UTC at the boundary
+    expect(login.headers.get('set-cookie')).toContain('HttpOnly');
+    const cookie = cookieFrom(login.headers);
+
+    const me = await api<User>('GET', '/api/auth/me', { headers: { cookie } });
+    expect(me.status).toBe(200);
+    expect(me.body.id).toBe('alice');
+
+    const logout = await api('POST', '/api/auth/logout', { headers: { cookie } });
+    expect(logout.status).toBe(204);
+    const cleared = cookieFrom(logout.headers);
+    expect(cleared).toBe('session=');
+
+    const after = await api<{ error: { code: string } }>('GET', '/api/auth/me', {
+      headers: { cookie: cleared },
+    });
+    expect(after.status).toBe(401);
+    expect(after.body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  test('the first sign-in creates the user; later ones return the same user', async () => {
+    const first = await api<User>('POST', '/api/auth/dev-login', { body: { userId: 'bob' } });
+    const again = await api<User>('POST', '/api/auth/dev-login', { body: { userId: 'bob' } });
+    expect(again.status).toBe(200);
+    expect(again.body).toEqual(first.body);
+  });
+
+  test('me without a session is 401 with the localized envelope', async () => {
+    const { status, body } = await api<{ error: { code: string; message: string } }>(
+      'GET',
+      '/api/auth/me?lang=ko',
+    );
+    expect(status).toBe(401);
+    expect(body.error).toMatchObject({ code: 'UNAUTHORIZED', message: '로그인이 필요합니다.' });
+  });
+
+  test('a session naming a user that does not exist is 401', async () => {
+    const { status } = await api('GET', '/api/auth/me', { headers: { cookie: 'session=ghost' } });
+    expect(status).toBe(401);
+  });
+
+  test('rejects malformed user ids', async () => {
+    for (const userId of ['', 'Alice', 'has space', 'x'.repeat(51)]) {
+      const { status } = await api('POST', '/api/auth/dev-login', { body: { userId } });
+      expect(status).toBe(400);
+    }
+  });
+
+  test('with AUTH_DRIVER=none the auth routes are not mounted', () => {
+    const config = loadServerConfig({ DB_DRIVER: 'memory', AUTH_DRIVER: 'none' });
+    const app = buildApp(createContainer(config, { log: silentLogger }), state);
+    expect(Object.keys(app.routes).filter((path) => path.startsWith('/api/auth'))).toEqual([]);
   });
 });

@@ -22,6 +22,11 @@ const configValidator = toValidator(
     /** `web` = HTTP only, `worker` = background jobs only, `all` = both. */
     serverRole: s._default(s.enum(['web', 'worker', 'all']), 'all'),
     shutdownDrainMs: s._default(s.int().check(s.gte(0), s.lte(60_000)), 3000),
+    /**
+     * How requests sign in: `none` = no sign-in at all (/api/auth is not
+     * mounted), `dev` = by user id alone, no password — never in production.
+     */
+    authDriver: s._default(s.enum(['none', 'dev']), 'none'),
   }),
 );
 
@@ -47,6 +52,7 @@ export function loadServerConfig(
     redisUrl: env.REDIS_URL,
     serverRole: env.SERVER_ROLE,
     shutdownDrainMs: numberOrUndefined(env.SHUTDOWN_DRAIN_MS),
+    authDriver: env.AUTH_DRIVER,
   });
 
   if (config.dbDriver === 'postgres' && !config.databaseUrl) {
@@ -54,6 +60,10 @@ export function loadServerConfig(
   }
   if (config.pubsubDriver === 'redis' && !config.redisUrl) {
     throw new Error('REDIS_URL is required when PUBSUB_DRIVER=redis');
+  }
+  if (config.authDriver === 'dev' && config.appEnv === 'production') {
+    // Anyone who knows a user id could sign in as that user.
+    throw new Error('AUTH_DRIVER=dev must never run with APP_ENV=production');
   }
   return config;
 }

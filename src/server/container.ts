@@ -19,19 +19,28 @@ import {
   createMemoryAuditLogRepository,
   createMemoryTodoRepository,
   createMemoryUnitOfWork,
+  createMemoryUserRepository,
   MemoryStore,
 } from './repositories/memory';
 import {
   createPostgresAuditLogRepository,
   createPostgresTodoRepository,
+  createPostgresUserRepository,
 } from './repositories/postgres';
-import type { AuditLogRepository, TodoRepository, UnitOfWork } from './repositories/types';
+import type {
+  AuditLogRepository,
+  TodoRepository,
+  UnitOfWork,
+  UserRepository,
+} from './repositories/types';
+import { AuthService } from './services/auth-service';
 import { TodoService } from './services/todo-service';
 
 export interface Container {
   readonly config: ServerConfig;
   readonly log: Logger;
   todoService(): TodoService;
+  authService(): AuthService;
   pubsub(): PubSub;
   /** Health probe: is the persistence layer reachable? */
   dbPing(): Promise<boolean>;
@@ -77,6 +86,11 @@ export function createContainer(
       ? createPostgresTodoRepository(postgres())
       : createMemoryTodoRepository(memoryStore()),
   );
+  const userRepository = lazy<UserRepository>(() =>
+    config.dbDriver === 'postgres'
+      ? createPostgresUserRepository(postgres())
+      : createMemoryUserRepository(memoryStore()),
+  );
   const auditLogRepository = lazy<AuditLogRepository>(() =>
     config.dbDriver === 'postgres'
       ? createPostgresAuditLogRepository(postgres())
@@ -100,10 +114,20 @@ export function createContainer(
       }),
   );
 
+  const authService = lazy(
+    () =>
+      new AuthService({
+        users: userRepository(),
+        auditLogs: auditLogRepository(),
+        uow: unitOfWork(),
+      }),
+  );
+
   return {
     config,
     log,
     todoService,
+    authService,
     pubsub,
     async dbPing() {
       if (config.dbDriver === 'memory') return true;
