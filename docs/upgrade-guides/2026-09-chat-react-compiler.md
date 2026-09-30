@@ -3,11 +3,14 @@
 이 보일러플레이트에서 출발해 자기 기능을 쌓은 저장소(이하 **다운스트림**)에서 일하는 AI 에이전트를 위한
 적용 절차입니다. 이 업데이트를 머지한 뒤 이 문서를 위에서부터 끝까지 따르세요.
 
-| PR                                                                                                          | 내용                                                                                           | main 머지 순서 |
-| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------- |
-| [#16](https://github.com/hwahee/boilerplate/pull/16)                                                        | 배포 빌드에 React 프로덕션 빌드를 싣기                                                         | 1              |
-| [#17](https://github.com/hwahee/boilerplate/pull/17) → [#18](https://github.com/hwahee/boilerplate/pull/18) | Bun 내장 React Compiler로 컴포넌트 자동 memo, 컴파일 리포트 (#17의 커밋이 #18로 main에 들어감) | 2              |
-| [#15](https://github.com/hwahee/boilerplate/pull/15)                                                        | 붙일 수 있는 채팅(서버·클라이언트 코어·홈 채팅), 마이그레이션 번호 충돌 검사                   | 3              |
+| PR                                                                                                          | 내용                                                                         | main 머지 순서 |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------- |
+| [#16](https://github.com/hwahee/boilerplate/pull/16)                                                        | 배포 빌드에 React 프로덕션 빌드를 싣기                                       | 1              |
+| [#17](https://github.com/hwahee/boilerplate/pull/17) → [#18](https://github.com/hwahee/boilerplate/pull/18) | Bun 내장 React Compiler로 컴포넌트 자동 memo, 컴파일 리포트                  | 2              |
+| [#19](https://github.com/hwahee/boilerplate/pull/19)                                                        | 붙일 수 있는 채팅(서버·클라이언트 코어·홈 채팅), 마이그레이션 번호 충돌 검사 | 3              |
+
+#17은 다른 브랜치에 머지되어, 같은 커밋이 #18로 main에 들어갔습니다. #19는 먼저 올렸다 닫은 #15를 검토해 다시 올린 것입니다.
+아래에서 PR 번호는 변경 묶음을 가리키는 이름입니다. 다운스트림은 `upstream/main`을 한 번 머지하면 셋을 모두 받습니다.
 
 ## 0. 작업 원칙
 
@@ -22,8 +25,8 @@
 | --------------------------------------------------- | -------------------- |
 | `grep -n "process.env.NODE_ENV" scripts/build.ts`   | #16                  |
 | `grep -n "reactCompiler: true" scripts/build.ts`    | #17                  |
-| `ls migrations/*_chat.sql src/client/chat/hooks.ts` | #15                  |
-| `grep -n "planMigrations" src/server/db/migrate.ts` | #15의 번호 충돌 검사 |
+| `ls migrations/*_chat.sql src/client/chat/hooks.ts` | #19                  |
+| `grep -n "planMigrations" src/server/db/migrate.ts` | #19의 번호 충돌 검사 |
 
 일부만 적용된 상태라면 빠진 PR의 절(4.1 / 4.2 / 4.3)만 따르면 됩니다.
 
@@ -124,7 +127,7 @@ git merge upstream/main        # 공유 브랜치는 rebase하지 않습니다
 
 검증: `bun run check`, `bun run build`(가드 통과), `bun run compiler:report`의 `.tsx` 항목마다 판단 완료.
 
-### 4.3 #15 — 채팅
+### 4.3 #19 — 채팅
 
 1. **마이그레이션 번호.** 마이그레이션은 번호만으로 식별됩니다.
    - 다운스트림에 같은 번호의 파일이 있으면 업스트림의 `0003_chat.sql`을 **다음 빈 번호로 바꿉니다**(파일 첫 줄 주석의 번호도 함께).

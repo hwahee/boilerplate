@@ -25,7 +25,7 @@ export const CHANNELS = {
   todosChanged: 'todos.changed',
   /** Emitted after a chat message is stored; payload: ChatMessage. */
   chatMessages: 'chat.messages',
-  /** Emitted when someone joins or leaves a chat room; payload: { roomId }. */
+  /** Emitted when a connection joins or leaves a chat room; payload: the change (chat-gateway.ts). */
   chatPresence: 'chat.presence',
   /** Background job queue consumed by worker-role processes. */
   jobs: 'jobs',

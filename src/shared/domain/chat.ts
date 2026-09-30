@@ -129,7 +129,6 @@ export const chatClientFrameValidator = toValidator(
 );
 export type ChatClientFrame = Infer<typeof chatClientFrameValidator>;
 
-/** Server → client. */
 /**
  * One open connection in a room. Presence travels per connection — a person
  * with two tabs open has two — and clients fold it into one entry per person

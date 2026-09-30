@@ -48,8 +48,8 @@ export function formatUtcInTimeZone(
 
 /**
  * One formatter per locale + zone. Building an `Intl.DateTimeFormat` costs
- * tens of times more than using one, and a list formats every row on each
- * render — a chat log redrew 500 timestamps per incoming message.
+ * tens of times more than using one, and a list formats a timestamp for every
+ * row it draws.
  */
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
