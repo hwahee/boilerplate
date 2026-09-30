@@ -25,7 +25,7 @@ src/
 └── client/          # React SPA
     ├── api/         # ★ 모든 API가 endpoints.ts 한 곳에 문서화되어 모임
     ├── auth/        # 헤더의 로그인/로그아웃 컨트롤
-    ├── chat/        # 채팅 코어 — 소켓·방 상태·useChatRoom (UI 없음)
+    ├── chat/        # 채팅 코어 — 소켓·방 상태·useChatRoomState/Actions (UI 없음)
     ├── ui/          # 디자인 시스템 컴포넌트
     ├── styles/      # 디자인 토큰 (라이트/다크 × 디자인 A/B)
     ├── theme/ i18n/ # 테마·로케일 컨텍스트
@@ -60,14 +60,15 @@ bun run dev               # 개발 서버 (서버 watch + 클라이언트 HMR) �
 
 DB 없이 바로 실행하려면 `.env`에서 `DB_DRIVER=memory`로 바꾸면 됩니다(테스트도 이 드라이버를 사용).
 
-| 명령            | 설명                                                                  |
-| --------------- | --------------------------------------------------------------------- |
-| `bun run dev`   | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                          |
-| `bun test`      | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행 |
-| `bun run check` | prettier + eslint + tsc + knip + test 전체 게이트 (pre-push와 동일)   |
-| `bun run build` | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)    |
-| `bun run start` | 빌드 산출물 실행                                                      |
-| `bun run db:*`  | `db:up` / `db:migrate` / `db:seed` / `db:setup`                       |
+| 명령                | 설명                                                                    |
+| ------------------- | ----------------------------------------------------------------------- |
+| `bun run dev`       | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                            |
+| `bun test`          | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행   |
+| `bun run check`     | prettier + eslint + tsc + knip + test 전체 게이트 (pre-push와 동일)     |
+| `bun run build`     | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)      |
+| `bun run start`     | 빌드 산출물 실행                                                        |
+| `bun run db:*`      | `db:up` / `db:migrate` / `db:seed` / `db:setup`                         |
+| `bun run chat:load` | 채팅 부하 테스트: 한 방에 N명 입장 + 메시지 전송 (`[인원] [메시지 수]`) |
 
 ## 아키텍처 결정
 
@@ -189,7 +190,9 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 - **붙이는 법**
   - 서버: 누가 들어오기 전에 방을 엽니다 — `container.chatService().openRoom({ id, policy })`.
     다시 열면 정책만 갱신되므로 부팅마다 불러도 됩니다. id는 `inquiry.42`처럼 기능 이름으로 구분합니다.
-  - 클라이언트: `useChatRoom(roomId)` → `messages`, `participants`, `status`, `send(text)`, `isMine(message)`.
+  - 클라이언트: `useChatRoomState(roomId, (room) => room.messages)`처럼 필요한 조각만 구독하고
+    (`messages`, `participants`, `status`), 보내기와 "내 메시지" 판별은 `useChatRoomActions(roomId)`
+    (`send(text)`, `isMine(message)`)로 합니다. 컴포넌트는 자기가 고른 조각이 바뀔 때만 다시 그려집니다.
   - 화면: 붙이는 쪽이 직접 그립니다. 예시는 홈 페이지의 채팅 상자(`src/client/pages/home-chat.tsx`,
     방은 `src/shared/domain/home-chat.ts`)입니다.
 - **방 정책** (`ChatRoomPolicy`, 방마다 다름): `retentionMs`는 메시지를 얼마나 보존할지(`null` = 방이
@@ -204,11 +207,19 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 - **회원과 게스트**: 채팅은 게스트도 회원과 똑같이 보냅니다(아래 인증 절의 예외). 게스트는 탭이 만든
   `guestId`(6자리, `sessionStorage`)로 표시되며 새로고침하면 유지되고 새 탭이나 재방문이면 새
   게스트입니다. 소켓은 연결할 때 신원을 읽으므로 로그인·로그아웃하면 클라이언트가 소켓을 새로 엽니다.
-- **접속자 목록과 수평 확장**: 메시지(`chat.messages`)와 입퇴장 알림(`chat.presence`)은 pub/sub으로
-  모든 인스턴스에 퍼지고, 각 인스턴스가 자기 소켓에 전달합니다. 접속자 목록은 `PUBSUB_DRIVER`를 따라
+- **접속자 목록과 수평 확장**: 메시지(`chat.messages`)와 입퇴장(`chat.presence`)은 pub/sub으로 모든
+  인스턴스에 퍼지고, 각 인스턴스가 자기 소켓에 전달합니다. 접속자 목록은 연결(탭) 단위로 다룹니다.
+  들어온 소켓에는 그 순간의 목록을 한 번 보내고(`presence`), 이후에는 누가 들어오고 나갔는지만
+  보냅니다(`presence-add` / `presence-remove`). 목록이 전송되는 동안 일어난 변화는 목록 뒤에 이어서
+  보냅니다. 한 사람의 여러 탭은 클라이언트가 한 명으로 합칩니다. 목록은 `PUBSUB_DRIVER`를 따라
   memory 또는 Redis 해시(`presence:<방 id>`)에 둡니다. 죽은 인스턴스는 퇴장을 알릴 수 없으므로 항목은
-  60초 뒤 만료되고 살아 있는 인스턴스가 20초마다 갱신합니다. 정상 종료 때는 그 인스턴스의 소켓을
-  목록에서 바로 빼고 닫아서 클라이언트가 다른 인스턴스로 다시 붙게 합니다.
+  60초 뒤 만료되고, 살아 있는 인스턴스가 20초마다 자기 연결을 갱신하면서 만료된 연결의 퇴장을 알립니다
+  (여러 인스턴스가 동시에 정리해도 한 번만). 정상 종료 때는 그 인스턴스의 소켓을 목록에서 바로 빼고
+  닫아서 클라이언트가 다른 인스턴스로 다시 붙게 합니다.
+- **부하에서의 동작**: 채팅 코어는 메시지가 몇 개가 오든 화면에 알리는 것을 애니메이션 프레임당 한 번으로
+  묶고(숨은 탭에서는 멈춤), 바뀐 조각만 새 값으로 바꿉니다. 한 번 받은 메시지 객체는 그대로 유지되므로
+  목록은 새 메시지 행만 그립니다(홈의 채팅 상자는 행을 `memo`로 둡니다). `bun run chat:load [인원] [메시지 수]`는
+  실제 앱과 WebSocket으로 한 방에 인원을 넣고 메시지를 보내 입장 완료 시간과 전송량을 잽니다.
 - **아직 없는 것**: 비공개(참여자만 읽는) 방과 운영자 역할, 입력 중·읽음 표시, 메시지 수정·삭제,
   도배 제한, 지난 채팅 더 불러오기.
 
@@ -275,6 +286,7 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
   CORS 허용/거부, 헬스체크, 로그인 → `me` 200 → 로그아웃 → `me` 401, 게스트의 todos 쓰기 401
   (`none`에서는 허용).
 - **채팅**: HTTP(전송·지난 채팅·`after`)와 실제 WebSocket(가입, 실시간 수신, 접속자 목록과 중복 제거,
-  퇴장, 없는 방)을 통합으로, 클라이언트 코어(소켓 공유·재연결, 번호 합치기와 빈틈 처리, 방 상태)를
-  가짜 소켓으로 검증합니다. presence 계약 테스트는 `REDIS_URL`이 있으면 Redis 드라이버에도 돕니다.
+  퇴장, 없는 방)을 통합으로, 게이트웨이의 접속자 순서(목록과 경합한 변화)와 만료 정리를 대역 소켓으로,
+  클라이언트 코어(소켓 공유·재연결, 번호 합치기와 빈틈 처리, 프레임당 한 번 알림, 객체 유지)를 가짜
+  소켓으로 검증합니다. presence 계약 테스트는 `REDIS_URL`이 있으면 Redis 드라이버(실제 만료 포함)에도 돕니다.
 - 전부 in-memory 드라이버로 돌므로 **`bun test` 하나로, 외부 환경 없이** 실행됩니다.
