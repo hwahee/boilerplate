@@ -14,9 +14,13 @@
 import type { ServerConfig } from './config';
 import { createPostgresDb, createPostgresUnitOfWork, type PostgresDb } from './db/postgres';
 import { createLogger, type Logger } from './lib/log';
+import { createPresenceStore, type PresenceStore } from './presence';
 import { createPubSub, type PubSub } from './pubsub';
+import { ChatGateway } from './realtime/chat-gateway';
 import {
   createMemoryAuditLogRepository,
+  createMemoryChatMessageRepository,
+  createMemoryChatRoomRepository,
   createMemoryTodoRepository,
   createMemoryUnitOfWork,
   createMemoryUserRepository,
@@ -24,16 +28,21 @@ import {
 } from './repositories/memory';
 import {
   createPostgresAuditLogRepository,
+  createPostgresChatMessageRepository,
+  createPostgresChatRoomRepository,
   createPostgresTodoRepository,
   createPostgresUserRepository,
 } from './repositories/postgres';
 import type {
   AuditLogRepository,
+  ChatMessageRepository,
+  ChatRoomRepository,
   TodoRepository,
   UnitOfWork,
   UserRepository,
 } from './repositories/types';
 import { AuthService } from './services/auth-service';
+import { ChatService } from './services/chat-service';
 import { TodoService } from './services/todo-service';
 
 export interface Container {
@@ -41,10 +50,13 @@ export interface Container {
   readonly log: Logger;
   todoService(): TodoService;
   authService(): AuthService;
+  chatService(): ChatService;
+  /** This process's chat sockets — one per process, like everything here. */
+  chatGateway(): ChatGateway;
   pubsub(): PubSub;
   /** Health probe: is the persistence layer reachable? */
   dbPing(): Promise<boolean>;
-  /** Closes every held resource (DB pool, pub/sub connections). */
+  /** Closes every held resource (DB pool, pub/sub and presence connections). */
   dispose(): Promise<void>;
 }
 
@@ -64,6 +76,7 @@ function lazy<T>(factory: () => T): () => T {
 export interface ContainerOverrides {
   log?: Logger;
   pubsub?: PubSub;
+  presence?: PresenceStore;
 }
 
 export function createContainer(
@@ -96,6 +109,16 @@ export function createContainer(
       ? createPostgresAuditLogRepository(postgres())
       : createMemoryAuditLogRepository(memoryStore()),
   );
+  const chatRoomRepository = lazy<ChatRoomRepository>(() =>
+    config.dbDriver === 'postgres'
+      ? createPostgresChatRoomRepository(postgres())
+      : createMemoryChatRoomRepository(memoryStore()),
+  );
+  const chatMessageRepository = lazy<ChatMessageRepository>(() =>
+    config.dbDriver === 'postgres'
+      ? createPostgresChatMessageRepository(postgres())
+      : createMemoryChatMessageRepository(memoryStore()),
+  );
   const unitOfWork = lazy<UnitOfWork>(() =>
     config.dbDriver === 'postgres'
       ? createPostgresUnitOfWork(postgres())
@@ -103,6 +126,7 @@ export function createContainer(
   );
 
   const pubsub = lazy<PubSub>(() => overrides.pubsub ?? createPubSub(config));
+  const presence = lazy<PresenceStore>(() => overrides.presence ?? createPresenceStore(config));
 
   const todoService = lazy(
     () =>
@@ -123,11 +147,35 @@ export function createContainer(
       }),
   );
 
+  const chatService = lazy(
+    () =>
+      new ChatService({
+        rooms: chatRoomRepository(),
+        messages: chatMessageRepository(),
+        users: userRepository(),
+        uow: unitOfWork(),
+        events: pubsub(),
+      }),
+  );
+
+  const chatGateway = lazy(
+    () =>
+      new ChatGateway({
+        config,
+        chat: chatService(),
+        presence: presence(),
+        events: pubsub(),
+        log,
+      }),
+  );
+
   return {
     config,
     log,
     todoService,
     authService,
+    chatService,
+    chatGateway,
     pubsub,
     async dbPing() {
       if (config.dbDriver === 'memory') return true;
@@ -135,6 +183,7 @@ export function createContainer(
     },
     async dispose() {
       await pubsub().close();
+      await presence().close();
       if (postgresCreated) await postgres().close();
     },
   };

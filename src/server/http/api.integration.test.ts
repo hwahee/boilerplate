@@ -9,7 +9,7 @@ import { VERSION_HEADER } from '@shared/api/version';
 import type { Todo } from '@shared/domain/todo';
 import type { User } from '@shared/domain/user';
 
-import { buildApp } from '../app';
+import { buildApp, type SocketData } from '../app';
 import { loadServerConfig } from '../config';
 import { createContainer, type Container } from '../container';
 import { silentLogger } from '../lib/log';
@@ -19,7 +19,7 @@ const ALLOWED_ORIGIN = 'https://allowed.example.com';
 
 let container: Container;
 let state: AppState;
-let server: Bun.Server<undefined>;
+let server: Bun.Server<SocketData>;
 let baseUrl: string;
 /** Session cookie of a signed-in member — writing todos needs one. */
 let memberCookie: string;

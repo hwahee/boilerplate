@@ -23,6 +23,10 @@ export interface PubSub {
 export const CHANNELS = {
   /** Emitted after any todo mutation; payload: { action, todoId }. */
   todosChanged: 'todos.changed',
+  /** Emitted after a chat message is stored; payload: ChatMessage. */
+  chatMessages: 'chat.messages',
+  /** Emitted when someone joins or leaves a chat room; payload: { roomId }. */
+  chatPresence: 'chat.presence',
   /** Background job queue consumed by worker-role processes. */
   jobs: 'jobs',
 } as const;
