@@ -145,6 +145,27 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 허용 origin은 `CORS_ORIGINS` 환경 변수(콤마 구분)로만 제어합니다. 와일드카드 없음,
 암묵적 허용 없음 (`src/server/http/cors.ts`).
 
+### 인증 (회원)
+
+**아직 구현 전**이지만 방향은 확정되어 있습니다 (AI 작업용 전제는 [CLAUDE.md](CLAUDE.md)).
+
+- 비밀번호를 다루지 않습니다. 개발 단계에서는 아이디만으로 로그인하고, 실제 인증은 구글 같은
+  외부 로그인에 위임합니다.
+- 다음 단계 계획: 인증 방식도 다른 인프라처럼 드라이버로 교체합니다 — `AUTH_DRIVER`
+  (`none` 기본 · `dev` · 나중에 `google`). 로그인 상태는 httpOnly 쿠키 하나로 전달되며
+  **same-origin 전제**입니다. CORS에서 `Access-Control-Allow-Credentials`를 켜지 않으므로
+  `CORS_ORIGINS`의 교차 출처 호출자에게는 쿠키가 전달되지 않습니다.
+
+이미 준비된 기반:
+
+- **401 `UNAUTHORIZED`** — 서비스·라우트에서 `UnauthorizedError`(`src/server/lib/errors.ts`)를
+  던지면 로컬라이즈된 에러 엔벨로프로 응답합니다.
+- **`/api/*` 폴백** — 마운트되지 않은 API 경로·메서드(예: 인증을 끈 상태의 `/api/auth/me`)도
+  SPA의 `index.html`(200)이 아니라 JSON 404로 응답합니다 (`src/server/routes/api-fallback.ts`).
+- **4xx는 재시도하지 않음** — 로그아웃 상태의 401이 재시도 지연 없이 바로 화면에 반영됩니다.
+- **in-memory 롤백이 모든 테이블을 포함** — `MemoryStore`에 테이블 필드를 추가하면 트랜잭션
+  롤백 대상이 자동으로 됩니다.
+
 ### i18n
 
 `@shared/i18n` 파사드를 서버(에러 메시지 — `Accept-Language`/`?lang=` 협상)와
@@ -159,9 +180,12 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 - **TanStack Query**: 목록 조회는 로딩/에러(재시도 버튼)/데이터/빈 상태를 모두 처리하고,
   mutation은 성공 시 목록 캐시를 invalidate합니다. 상태 토글은 **optimistic update**
   (스냅샷 → 즉시 반영 → 실패 시 롤백 → settle 시 재동기화)로 구현되어 있습니다.
+  실패한 조회는 1회 재시도하되, 4xx(400/401/404 등 — 다시 물어도 답이 같은 실패)는
+  재시도하지 않습니다 (`isRetryableError`, `src/client/api/http.ts`).
 - **최소 상태**: 페이지/필터/정렬은 URL 쿼리에서 파생, 서버 데이터는 쿼리 캐시에만 존재.
   로컬 `useState`는 "아직 제출 안 된 폼 입력"뿐입니다.
-- **라우팅**: react-router (BrowserRouter). 서버의 SPA 캐치올이 딥링크를 지원합니다.
+- **라우팅**: react-router (BrowserRouter). 서버의 SPA 캐치올이 딥링크를 지원합니다
+  (`/api/*`는 제외 — 없는 API 경로는 JSON 404).
 - **디자인 시스템**: 토큰 3계층(원시 → 디자인 치수 → 시맨틱 컬러)으로 구성되며
   `/design-system` 페이지에서 전부 확인할 수 있습니다. `<html>`의 `data-theme`
   (light/dark)와 `data-design`(A=심미성/B=시인성) 속성만으로 전환됩니다 — 헤더의 토글
@@ -197,6 +221,8 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 ## 테스트 전략
 
 - **단위**: 비즈니스 로직(`TodoService`) — 트랜잭션 롤백, 이벤트 발행, 성공/실패 케이스.
+  라우트가 아직 던지지 않는 도메인 에러의 HTTP 매핑(401)은 `respond.test.ts`에서 검증합니다.
 - **통합**: 실제 앱을 임시 포트에 띄워 HTTP로 검증 — CRUD, 페이지네이션/정렬/필터,
-  검증 실패(400)와 로컬라이즈된 메시지, 404, 버전 스큐(409), CORS 허용/거부, 헬스체크.
+  검증 실패(400)와 로컬라이즈된 메시지, 404(없는 API 경로·메서드 포함), 버전 스큐(409),
+  CORS 허용/거부, 헬스체크.
 - 전부 in-memory 드라이버로 돌므로 **`bun test` 하나로, 외부 환경 없이** 실행됩니다.

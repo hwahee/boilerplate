@@ -73,6 +73,7 @@ export const en = {
   'notFound.goHome': 'Go to home',
 
   'error.validation': 'The request contains invalid data.',
+  'error.unauthorized': 'Please sign in to continue.',
   'error.notFound': 'The requested resource was not found.',
   'error.internal': 'An unexpected error occurred. Please try again.',
   'error.versionMismatch':
