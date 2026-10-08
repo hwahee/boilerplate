@@ -6,7 +6,7 @@
 ## 원칙
 
 1. **모든 인터랙티브 컴포넌트는 `testId`가 필수 prop**입니다
-   (`Button`, `TextField`, `Select`, `Checkbox`, `Accordion`, `Palette`). testId 없이 렌더링하면 타입
+   (`Button`, `TextField`, `TextArea`, `Select`, `Checkbox`, `Accordion`, `Palette`). testId 없이 렌더링하면 타입
    에러가 나므로 자동화 불가능한 컨트롤이 애초에 만들어질 수 없습니다.
 2. **testid 문자열은 인라인으로 쓰지 않습니다.** 유일한 출처는
    [`src/client/testing/testids.ts`](../src/client/testing/testids.ts)의 `TESTID` 레지스트리입니다.
@@ -61,7 +61,11 @@
 | 디자인 시스템 | `design-system.page`, `design-system.section.<name>`, `ds.*` (쇼케이스 컴포넌트)             |
 | NotFound      | `not-found.page`, `not-found.home-link`                                                      |
 
-`TextField`는 에러 표시 시 자동으로 `` `${testId}.error` `` 요소를 추가합니다.
+`TextField`는 에러 표시 시 자동으로 `` `${testId}.error` `` 요소를 추가합니다. `TextArea`도 같고,
+힌트(글자 수 등)가 있으면 `` `${testId}.hint` ``를 더합니다.
+
+`Button`은 `to`를 주면 링크(`<a>`)로 그려집니다. 이동은 링크, 동작은 버튼이므로 자동화에서도
+`getByRole('link')`로 찾습니다. 링크를 버튼으로 감싸거나 그 반대로 중첩하지 않습니다.
 
 `Accordion`은 항목마다 `` `${testId}.trigger.<itemId>` ``와 `` `${testId}.panel.<itemId>` ``를
 자동 파생합니다. 열림/닫힘은 trigger의 `aria-expanded`로 관찰·대기하세요.
