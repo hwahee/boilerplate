@@ -236,6 +236,11 @@ a {
   cursor: not-allowed;
 }
 
+/* A Button with `to` renders an <a> wearing the button look — no link underline. */
+.btn--link {
+  text-decoration: none;
+}
+
 .btn--primary {
   background: var(--color-primary);
   color: var(--color-primary-contrast);
@@ -297,6 +302,22 @@ a {
 
 .field__input:disabled {
   opacity: 0.55;
+}
+
+/* TextArea: grows with its rows instead of the single-line control height. */
+.field__input--multiline {
+  height: auto;
+  padding-block: var(--space-2);
+  line-height: 1.5;
+  resize: vertical;
+  /* A tall box is a surface, not a pill: the kids skin's pill-shaped
+     control radius would bend it into a capsule. */
+  border-radius: min(var(--radius-control), var(--radius-surface));
+}
+
+.field__hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
 }
 
 .field__error {
