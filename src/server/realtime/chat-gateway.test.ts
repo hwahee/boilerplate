@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 
 import type { ChatServerFrame } from '@shared/domain/chat';
 
+import { testOidcEnv } from '../auth/fake-issuer';
 import { loadServerConfig } from '../config';
 import { createContainer, type Container } from '../container';
 import { silentLogger } from '../lib/log';
@@ -19,7 +20,7 @@ let container: Container;
 let stop: (() => Promise<void>) | undefined;
 
 beforeEach(async () => {
-  container = createContainer(loadServerConfig({ DB_DRIVER: 'memory', AUTH_DRIVER: 'dev' }), {
+  container = createContainer(loadServerConfig({ DB_DRIVER: 'memory', ...testOidcEnv() }), {
     log: silentLogger,
   });
   await container.chatService().openRoom({

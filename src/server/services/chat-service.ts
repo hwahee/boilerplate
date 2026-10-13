@@ -24,17 +24,11 @@ import { ValidationError } from '@shared/validation';
 import type { Caller } from '../auth/session';
 import { NotFoundError } from '../lib/errors';
 import { CHANNELS, type PubSub } from '../pubsub';
-import type {
-  ChatMessageRepository,
-  ChatRoomRepository,
-  UnitOfWork,
-  UserRepository,
-} from '../repositories/types';
+import type { ChatMessageRepository, ChatRoomRepository, UnitOfWork } from '../repositories/types';
 
 interface ChatServiceDeps {
   rooms: ChatRoomRepository;
   messages: ChatMessageRepository;
-  users: UserRepository;
   uow: UnitOfWork;
   events: PubSub;
 }
@@ -76,18 +70,12 @@ export class ChatService {
   }
 
   /**
-   * Who is speaking: a member as their user (display name as of now), anyone
+   * Who is speaking: a member under the nickname they signed in with, anyone
    * else as the guest their tab says they are.
    */
-  async participantFor(caller: Caller, guestId: string | undefined): Promise<ChatParticipant> {
+  participantFor(caller: Caller, guestId: string | undefined): ChatParticipant {
     if (caller.kind === 'member') {
-      const user = await this.deps.users.findById(caller.userId);
-      return {
-        kind: 'member',
-        userId: caller.userId,
-        // The dev driver trusts a cookie even for an id with no user row.
-        displayName: user?.displayName ?? caller.userId,
-      };
+      return { kind: 'member', userId: caller.userId, displayName: caller.displayName };
     }
     if (guestId === undefined) {
       throw new ValidationError([
