@@ -35,6 +35,8 @@ class FakeSocket {
 
 let sockets: FakeSocket[];
 let connection: ChatConnection;
+/** Stands in for `window`: the test fires the page lifecycle events on it. */
+let page: EventTarget;
 const latest = () => sockets.at(-1)!;
 
 function recorder(): RoomListener & { frames: ChatServerFrame[]; drops: number } {
@@ -49,6 +51,7 @@ function recorder(): RoomListener & { frames: ChatServerFrame[]; drops: number }
 
 beforeEach(() => {
   sockets = [];
+  page = new EventTarget();
   connection = new ChatConnection(
     () => 'ws://test/ws/chat?guestId=a1b2c3',
     (url) => {
@@ -56,8 +59,14 @@ beforeEach(() => {
       sockets.push(socket);
       return socket as unknown as WebSocket;
     },
+    page,
   );
 });
+
+/** A `pagehide`/`pageshow` as the browser sends it; `persisted` is true for the back/forward cache. */
+function pageEvent(type: 'pagehide' | 'pageshow', persisted: boolean): Event {
+  return Object.assign(new Event(type), { persisted });
+}
 
 describe('ChatConnection', () => {
   test('opens one socket for the first room and joins every watched room once open', () => {
@@ -129,5 +138,56 @@ describe('ChatConnection', () => {
     expect(sockets).toHaveLength(1);
     await Bun.sleep(1100); // first retry after 1s
     expect(sockets).toHaveLength(2);
+  });
+
+  test('leaving the page closes the socket at once and does not reopen it', async () => {
+    const room = recorder();
+    connection.watch('a', room);
+    latest().open();
+
+    page.dispatchEvent(pageEvent('pagehide', true));
+    expect(latest().closed).toBe(true);
+    expect(room.drops).toBe(1);
+    await Bun.sleep(1100); // past the first retry
+    expect(sockets).toHaveLength(1);
+  });
+
+  test('back from the back/forward cache, it reconnects and re-joins the rooms it watched', () => {
+    const a = recorder();
+    connection.watch('a', a);
+    connection.watch('b', recorder());
+    latest().open();
+    page.dispatchEvent(pageEvent('pagehide', true));
+
+    page.dispatchEvent(pageEvent('pageshow', true));
+    expect(sockets).toHaveLength(2);
+    latest().open();
+    expect(latest().sent).toEqual([
+      { type: 'join', roomId: 'a' },
+      { type: 'join', roomId: 'b' },
+    ]);
+    latest().receive({ type: 'joined', roomId: 'a' });
+    expect(a.frames).toEqual([{ type: 'joined', roomId: 'a' }]);
+  });
+
+  test('a pageshow that is not from the back/forward cache does nothing', () => {
+    connection.watch('a', recorder());
+    latest().open();
+
+    page.dispatchEvent(pageEvent('pageshow', false));
+    expect(sockets).toHaveLength(1);
+    expect(latest().closed).toBe(false);
+    expect(latest().sent).toEqual([{ type: 'join', roomId: 'a' }]);
+  });
+
+  test('back from the back/forward cache with no room watched, it stays closed', async () => {
+    const stop = connection.watch('a', recorder());
+    latest().open();
+    stop();
+    await Bun.sleep(5);
+    page.dispatchEvent(pageEvent('pagehide', true));
+
+    page.dispatchEvent(pageEvent('pageshow', true));
+    expect(sockets).toHaveLength(1);
   });
 });

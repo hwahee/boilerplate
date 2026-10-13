@@ -17,6 +17,11 @@ const MAX_RETRY_MS = 15_000;
  * one is let go. While any room is watched it keeps itself connected — reconnecting
  * with backoff, then re-joining every watched room, which answers each with a
  * fresh `joined` so the room catches up on what it missed.
+ *
+ * Leaving the page closes it at once, so the server drops us from presence
+ * right away — not whenever the browser gets to it, which for a page kept in
+ * the back/forward cache could leave us in "who is here" until it is evicted.
+ * Coming back from that cache opens a new socket, which re-joins and catches up.
  */
 export class ChatConnection {
   private socket: WebSocket | null = null;
@@ -25,11 +30,21 @@ export class ChatConnection {
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private idleTimer: ReturnType<typeof setTimeout> | undefined;
 
-  /** `url` is read on every (re)connect: it carries the tab's guest id. */
+  /**
+   * `url` is read on every (re)connect: it carries the tab's guest id.
+   * `page` is where `pagehide`/`pageshow` fire — `window` in a browser.
+   */
   constructor(
     private readonly url: () => string,
     private readonly openSocket: (url: string) => WebSocket = (url) => new WebSocket(url),
-  ) {}
+    page: EventTarget | undefined = typeof window === 'undefined' ? undefined : window,
+  ) {
+    page?.addEventListener('pagehide', () => this.disconnect());
+    page?.addEventListener('pageshow', (event) => {
+      // Not persisted: a fresh page load, whose rooms connect as they are watched.
+      if ((event as PageTransitionEvent).persisted) this.resume();
+    });
+  }
 
   /** Starts hearing `roomId`; returns the function that stops. */
   watch(roomId: string, listener: RoomListener): () => void {
@@ -69,6 +84,11 @@ export class ChatConnection {
     if (this.rooms.size === 0) return;
     this.disconnect();
     this.connect();
+  }
+
+  /** Back from the back/forward cache: the rooms still watched get a socket again. */
+  private resume(): void {
+    if (this.rooms.size > 0 && !this.socket) this.connect();
   }
 
   private connect(): void {
