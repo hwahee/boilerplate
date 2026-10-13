@@ -1,28 +1,23 @@
 /**
- * Header sign-in controls: a user-id field while signed out, the user and a
- * sign-out button while signed in. Renders nothing while `me` is loading or
- * when the server runs without sign-in (`AUTH_DRIVER=none` answers 404).
+ * Header sign-in controls: a sign-in button while signed out, the member and
+ * a sign-out button while signed in. Both leave for the member server's pages
+ * and come back (CLAUDE.md) — signing in returns to the page it started from.
+ * Renders nothing while `me` is loading or when the server runs without
+ * sign-in (`AUTH_DRIVER=none` answers 404).
  */
-import { devLoginValidator } from '@shared/domain/user';
 import { LogIn, LogOut, UserRound } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useLocation } from 'react-router';
 
-import { ApiRequestError } from '../api/http';
-import { useDevLogin, useLogout, useMe } from '../api/queries';
+import { authApi } from '../api/endpoints';
+import { useMe } from '../api/queries';
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
 import { Button } from '../ui/button';
-import { TextField } from '../ui/text-field';
 
 export function AccountControls() {
   const { t } = useI18n();
   const me = useMe();
-  const devLogin = useDevLogin();
-  const logout = useLogout();
-
-  // The only local state: the uncommitted user-id input (+ its validation error).
-  const [userId, setUserId] = useState('');
-  const [userIdError, setUserIdError] = useState<string | undefined>(undefined);
+  const location = useLocation();
 
   if (!me.isSuccess) return null;
 
@@ -33,10 +28,10 @@ export function AccountControls() {
           <UserRound aria-hidden size="1em" />
           {t('auth.signedInAs', { name: me.data.displayName })}
         </span>
+        {/* Actions that leave the page: the member server confirms the sign-out. */}
         <Button
           variant="ghost"
-          loading={logout.isPending}
-          onClick={() => logout.mutate()}
+          onClick={() => window.location.assign(authApi.signOutUrl)}
           testId={TESTID.app.account.signOut}
         >
           <LogOut aria-hidden size="1em" />
@@ -46,47 +41,18 @@ export function AccountControls() {
     );
   }
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const parsed = devLoginValidator.safeParse({ userId: userId.trim() });
-    if (!parsed.ok) {
-      setUserIdError(t('auth.userIdInvalid'));
-      return;
-    }
-    setUserIdError(undefined);
-    devLogin.mutate(parsed.value.userId, { onSuccess: () => setUserId('') });
-  };
-
-  const serverError =
-    devLogin.error instanceof ApiRequestError ? devLogin.error.message : undefined;
-
   return (
-    <form
-      className="account-controls"
-      onSubmit={submit}
-      aria-label={t('auth.signIn')}
-      data-testid={TESTID.app.account.form}
-    >
-      <TextField
-        label={t('auth.userId')}
-        hideLabel
-        placeholder={t('auth.userIdPlaceholder')}
-        value={userId}
-        onChange={(event) => setUserId(event.target.value)}
-        error={userIdError ?? serverError}
-        maxLength={50}
-        autoComplete="username"
-        testId={TESTID.app.account.userIdInput}
-      />
+    <div className="account-controls">
       <Button
-        type="submit"
         variant="secondary"
-        loading={devLogin.isPending}
+        onClick={() =>
+          window.location.assign(authApi.signInUrl(location.pathname + location.search))
+        }
         testId={TESTID.app.account.signIn}
       >
         <LogIn aria-hidden size="1em" />
         {t('auth.signIn')}
       </Button>
-    </form>
+    </div>
   );
 }
