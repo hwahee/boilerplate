@@ -303,10 +303,9 @@ const SIGN_IN = 'sign-in-test-service';
 
 describe('auth (AUTH_DRIVER=oidc)', () => {
   /** Starts a sign-in the way a browser does; returns what comes back to the callback. */
-  async function startSignIn(returnTo: string) {
-    const login = await api('GET', `/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`, {
-      as: 'guest',
-    });
+  async function startSignIn(returnTo: string, appearance: Record<string, string> = {}) {
+    const query = new URLSearchParams({ returnTo, ...appearance });
+    const login = await api('GET', `/api/auth/login?${query}`, { as: 'guest' });
     const location = new URL(login.headers.get('location') ?? '');
     return {
       login,
@@ -337,6 +336,23 @@ describe('auth (AUTH_DRIVER=oidc)', () => {
     const me = await api<User>('GET', '/api/auth/me', { headers: { cookie: session } });
     expect(me.status).toBe(200);
     expect(me.body).toEqual({ id: 'alice', displayName: 'Alice' });
+  });
+
+  test("the member server's sign-in page is asked to look like the page it started on", async () => {
+    const { location } = await startSignIn('/', {
+      theme: 'dark',
+      design: 'office',
+      ui_locales: 'ko',
+    });
+    expect(location.searchParams.get('theme')).toBe('dark');
+    expect(location.searchParams.get('design')).toBe('office');
+    expect(location.searchParams.get('ui_locales')).toBe('ko');
+
+    // Unknown values are dropped, not passed through.
+    const odd = await startSignIn('/', { theme: 'sepia', design: '<x>', ui_locales: 'fr' });
+    expect(odd.location.searchParams.has('theme')).toBe(false);
+    expect(odd.location.searchParams.has('design')).toBe(false);
+    expect(odd.location.searchParams.has('ui_locales')).toBe(false);
   });
 
   test('a sign-in that cannot finish lands on /sign-in-failed and signs nobody in', async () => {

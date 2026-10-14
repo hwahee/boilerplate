@@ -7,6 +7,7 @@
  * sign-in and sign-out paths by navigating, so they answer with redirects;
  * a sign-in that cannot finish lands on /sign-in-failed.
  */
+import { appearanceFromParams } from '@shared/domain/appearance';
 import type { User } from '@shared/domain/user';
 
 import {
@@ -64,13 +65,17 @@ export function authRoutes(container: Container, deps: HttpDeps): AuthRoutes {
   return {
     '/api/auth/login': apiRoute<'/api/auth/login'>(
       {
-        /** GET ?returnTo=/path → the member server's sign-in, then back to `returnTo` */
+        /**
+         * GET ?returnTo=/path&theme&design&ui_locales → the member server's
+         * sign-in, looking like the page it started on, then back to `returnTo`
+         */
         GET: (req) =>
           navigation('login', async () => {
+            const params = new URL(req.url).searchParams;
             const state = crypto.randomUUID();
-            const returnTo = returnPath(new URL(req.url).searchParams.get('returnTo'));
+            const returnTo = returnPath(params.get('returnTo'));
             setSignInCookie(req, oidc, { state, returnTo });
-            return redirect(await client().authorizationUrl(state));
+            return redirect(await client().authorizationUrl(state, appearanceFromParams(params)));
           }),
       },
       deps,
