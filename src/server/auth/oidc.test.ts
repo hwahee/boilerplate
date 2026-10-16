@@ -30,6 +30,16 @@ describe('OidcClient', () => {
     });
   });
 
+  test("asks the issuer's pages to look like this one: theme, design, ui_locales", async () => {
+    const url = new URL(
+      await client.authorizationUrl('state-123', { theme: 'dark', design: 'office', locale: 'ko' }),
+    );
+    expect(url.searchParams.get('state')).toBe('state-123');
+    expect(url.searchParams.get('theme')).toBe('dark');
+    expect(url.searchParams.get('design')).toBe('office');
+    expect(url.searchParams.get('ui_locales')).toBe('ko');
+  });
+
   test('trades a code for who signed in: sub, name, and the issuer session', async () => {
     const code = issuer.issueCode({ sub: 'alice', name: '앨리스', sid: 'sid-1' });
     expect(await client.signIn(code)).toEqual({

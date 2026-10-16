@@ -173,7 +173,9 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 - **로그인**: 헤더의 "로그인" → `GET /api/auth/login?returnTo=` → 회원 서버의 로그인 페이지 →
   `GET /api/auth/callback`에서 코드를 회원 정보로 바꾸고 → 시작한 페이지로 돌아옵니다. 다른 서비스에
   이미 로그인해 있으면 회원 서버 페이지는 입력 없이 지나갑니다. 끝내지 못한 로그인(거절·만료·재사용)은
-  `/sign-in-failed`로 옵니다.
+  `/sign-in-failed`로 옵니다. 로그인 링크는 지금의 테마·디자인·언어(`theme`·`design`·`ui_locales`)를 함께
+  넘기고, 서버가 이를 authorize 요청에 붙여 회원 서버의 로그인 페이지가 같은 모습으로 뜹니다
+  (`src/shared/domain/appearance.ts`).
 - **로그아웃**: 헤더의 "로그아웃" → `GET /api/auth/logout` → 회원 서버의 확인 페이지. 확인하면 회원
   서버가 모든 서비스의 `GET /api/auth/frontchannel-logout`을 불러 각자의 세션을 끝내고, 회원 서버의
   로그아웃 완료 페이지에서 끝납니다.
@@ -185,7 +187,7 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 - **회원 정보**: 이 서비스는 회원 테이블을 두지 않습니다(`0004_drop_users`). 회원은 로그인할 때
   회원 서버가 알려 준 아이디와 닉네임으로만 압니다.
 - **API**: `GET /api/auth/me` → `User({id, displayName}) | 401`. 로그인·로그아웃은 주소로 이동합니다
-  (`authApi.signInUrl(returnTo)`, `authApi.signOutUrl` — `src/client/api/endpoints.ts`).
+  (`authApi.signInUrl(returnTo, appearance)`, `authApi.signOutUrl` — `src/client/api/endpoints.ts`).
 - **신원 전달**: 라우트는 `ctx.caller`(`src/server/http/context.ts`)만 읽습니다 — `member`(로그인,
   아이디·닉네임), `guest`(로그인 기능은 있지만 로그인 안 함), `anyone`(`none` — 구분 없음).
   클라이언트의 `useCaller()`가 같은 셋(+ 로딩 중 `unknown`)을 돌려줍니다.

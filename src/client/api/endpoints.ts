@@ -16,6 +16,7 @@
  * ./queries.ts), never call `fetch` directly.
  */
 import type { Page } from '@shared/api/pagination';
+import { appearanceParams, type Appearance } from '@shared/domain/appearance';
 import type {
   ChatHistory,
   ChatHistoryQuery,
@@ -100,14 +101,16 @@ export const todosApi = {
  */
 export const authApi = {
   /**
-   * `GET /api/auth/login?returnTo=` — navigate here (full page) to sign in.
+   * `GET /api/auth/login?returnTo=&theme=&design=&ui_locales=` — navigate here
+   * (full page) to sign in.
    *
-   * Goes to the member server's sign-in page and comes back to `returnTo`
-   * (a path on this site) signed in. A sign-in that cannot finish — turned
-   * down, expired, or used twice — lands on `/sign-in-failed` instead.
+   * Goes to the member server's sign-in page, which looks the way
+   * `appearance` says (@shared/domain/appearance), and comes back to
+   * `returnTo` (a path on this site) signed in. A sign-in that cannot finish
+   * — turned down, expired, or used twice — lands on `/sign-in-failed` instead.
    */
-  signInUrl(returnTo: string): string {
-    return `/api/auth/login?${new URLSearchParams({ returnTo })}`;
+  signInUrl(returnTo: string, appearance: Appearance): string {
+    return `/api/auth/login?${new URLSearchParams({ returnTo, ...appearanceParams(appearance) })}`;
   },
 
   /**

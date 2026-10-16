@@ -8,11 +8,13 @@ import { LogIn } from 'lucide-react';
 import { authApi } from '../api/endpoints';
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
+import { useTheme } from '../theme/theme-context';
 import { Alert } from '../ui/alert';
 import { Button } from '../ui/button';
 
 export function SignInFailedPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const { theme, design } = useTheme();
   return (
     <section
       className="sign-in-failed"
@@ -25,7 +27,7 @@ export function SignInFailedPage() {
       </Alert>
       <div className="sign-in-failed__actions">
         <Button
-          onClick={() => window.location.assign(authApi.signInUrl('/'))}
+          onClick={() => window.location.assign(authApi.signInUrl('/', { theme, design, locale }))}
           testId={TESTID.signInFailed.retry}
         >
           <LogIn aria-hidden size="1em" />

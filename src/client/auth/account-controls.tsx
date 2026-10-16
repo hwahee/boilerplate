@@ -12,10 +12,12 @@ import { authApi } from '../api/endpoints';
 import { useMe } from '../api/queries';
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
+import { useTheme } from '../theme/theme-context';
 import { Button } from '../ui/button';
 
 export function AccountControls() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const { theme, design } = useTheme();
   const me = useMe();
   const location = useLocation();
 
@@ -46,7 +48,9 @@ export function AccountControls() {
       <Button
         variant="secondary"
         onClick={() =>
-          window.location.assign(authApi.signInUrl(location.pathname + location.search))
+          window.location.assign(
+            authApi.signInUrl(location.pathname + location.search, { theme, design, locale }),
+          )
         }
         testId={TESTID.app.account.signIn}
       >

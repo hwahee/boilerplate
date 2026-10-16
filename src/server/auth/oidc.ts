@@ -7,6 +7,7 @@
  * The id_token is read and dropped: this service keeps who signed in
  * (./session.ts), never a token.
  */
+import { appearanceParams, type Appearance } from '@shared/domain/appearance';
 import { s, toValidator } from '@shared/validation';
 
 import type { ServerConfig } from '../config';
@@ -51,8 +52,11 @@ const idTokenClaimsValidator = toValidator(
 const sameIssuer = (a: string, b: string) => a.replace(/\/$/, '') === b.replace(/\/$/, '');
 
 export interface OidcClient {
-  /** Where to send the browser to sign in; `state` comes back on the callback. */
-  authorizationUrl(state: string): Promise<string>;
+  /**
+   * Where to send the browser to sign in; `state` comes back on the callback.
+   * `appearance` rides along so the member server's page looks like this one.
+   */
+  authorizationUrl(state: string, appearance?: Appearance): Promise<string>;
   /** Trades the callback's code for who signed in. Throws SignInError when refused. */
   signIn(code: string): Promise<Session>;
   /** Where to send the browser to sign out of every service, or null if the server has none. */
@@ -84,13 +88,16 @@ export function createOidcClient(oidc: OidcConfig): OidcClient {
   };
 
   return {
-    async authorizationUrl(state) {
+    async authorizationUrl(state, appearance = {}) {
       const url = new URL((await discover()).authorization_endpoint);
       url.searchParams.set('client_id', oidc.clientId);
       url.searchParams.set('response_type', 'code');
       url.searchParams.set('scope', SCOPE);
       url.searchParams.set('redirect_uri', redirectUri);
       url.searchParams.set('state', state);
+      for (const [name, value] of Object.entries(appearanceParams(appearance))) {
+        url.searchParams.set(name, value);
+      }
       return url.href;
     },
 

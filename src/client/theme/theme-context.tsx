@@ -12,10 +12,10 @@
  * Both persist to localStorage. The initial theme derives from the OS
  * preference — computed once, not stored as extra state.
  */
+import type { Design, Theme } from '@shared/domain/appearance';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-export type Theme = 'light' | 'dark';
-export type Design = 'a' | 'b' | 'office' | 'kids';
+export type { Design, Theme };
 
 /** The design a toggle click moves to next — cycles A → B → Office → Kids → A. */
 const NEXT_DESIGN: Record<Design, Design> = { a: 'b', b: 'office', office: 'kids', kids: 'a' };
