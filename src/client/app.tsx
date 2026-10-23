@@ -1,12 +1,13 @@
 /**
  * App shell: providers (query cache, theme, locale, overlays), router, and the layout
  * with the shared footer, which routes can opt out of one group at a time.
- * The header keeps navigation and the account controls; the global preference
- * switches (theme / design variant / language) live in the footer — see
- * ./ui/app-controls.tsx.
+ * The header is just the service name (a link home) and the account controls.
+ * Page links live in the footer's link columns, and the global preference
+ * switches (theme / design variant / language) in its identity row — see
+ * ./ui/footer.tsx and ./ui/app-controls.tsx.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, NavLink, Outlet, Route, Routes } from 'react-router';
+import { BrowserRouter, Link, Outlet, Route, Routes } from 'react-router';
 
 import { isRetryableError } from './api/http';
 import { AccountControls } from './auth/account-controls';
@@ -36,22 +37,17 @@ function Header() {
   return (
     <header className="app-header" data-testid={TESTID.app.header}>
       <div className="app-header__brand">
-        <h1 className="app-header__title">{t('app.title')}</h1>
+        {/* With no nav row, the service name is the way home from any page. */}
+        <h1 className="app-header__title">
+          <Link to="/" data-testid={TESTID.app.homeLink}>
+            {t('app.title')}
+          </Link>
+        </h1>
         <p className="app-header__tagline muted">{t('app.tagline')}</p>
       </div>
 
-      <nav className="app-nav" aria-label={t('app.title')}>
-        {/* NavLink sets aria-current="page" on the active route automatically. */}
-        <NavLink to="/" end data-testid={TESTID.app.navTodos}>
-          {t('nav.todos')}
-        </NavLink>
-        <NavLink to="/design-system" data-testid={TESTID.app.navDesignSystem}>
-          {t('nav.designSystem')}
-        </NavLink>
-      </nav>
-
-      {/* Signing in is navigation, so it stays up here; the preference
-          switches that used to share this row moved to the footer. */}
+      {/* Signing in stays up here; the preference switches that used to share
+          this row moved to the footer. */}
       <div className="app-controls">
         <AccountControls />
       </div>

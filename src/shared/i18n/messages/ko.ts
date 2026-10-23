@@ -5,7 +5,6 @@ export const ko: Record<MessageKey, string> = {
   'app.title': 'Bun 풀스택 보일러플레이트',
   'app.tagline': 'React · Bun · Bun server 모노레포 스타터',
 
-  'nav.todos': '할 일',
   'nav.designSystem': '디자인 시스템',
 
   'common.skipToContent': '본문으로 건너뛰기',

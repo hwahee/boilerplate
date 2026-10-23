@@ -6,12 +6,15 @@
  * The identity row is closed with a hairline of its own — that rule is what
  * keeps the service's identity from reading as just another link column.
  *
- * The "Other Services" column is data-driven: it renders whatever
- * `/sitemap.json` serves, so adding a service is a data edit (see
- * `public/sitemap.json`) rather than a change here. While that list loads —
- * or if it fails — the column heading stays and the list is simply omitted:
- * chrome below the fold should never show a spinner or an error banner.
+ * The "Other Services" column opens with this service's own pages (they are
+ * routes here, so they are localized and navigate without a reload), then
+ * lists whatever `/sitemap.json` serves — adding a service is a data edit
+ * (see `public/sitemap.json`) rather than a change here. While that list
+ * loads — or if it fails — it is simply omitted: chrome below the fold should
+ * never show a spinner or an error banner.
  */
+import { NavLink } from 'react-router';
+
 import type { MessageKey } from '@shared/i18n';
 
 import { useSitemap } from '../api/queries';
@@ -65,6 +68,16 @@ export function Footer() {
           <h2 className="app-footer__heading" id="footer-services-heading">
             {t('footer.otherServices')}
           </h2>
+          {/* Separate from the sitemap list on purpose: app.footer.services
+              appearing is the automation signal that /sitemap.json arrived. */}
+          <ul className="app-footer__list">
+            <li>
+              {/* NavLink marks the link aria-current="page" while on it. */}
+              <NavLink to="/design-system" data-testid={TESTID.app.navDesignSystem}>
+                {t('nav.designSystem')}
+              </NavLink>
+            </li>
+          </ul>
           {services.length > 0 && (
             <ul className="app-footer__list" data-testid={TESTID.app.footerServices}>
               {services.map((service) => (

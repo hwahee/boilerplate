@@ -9,7 +9,6 @@ export const en = {
   'app.title': 'Bun Fullstack Boilerplate',
   'app.tagline': 'React · Bun · Bun server monorepo starter',
 
-  'nav.todos': 'Todos',
   'nav.designSystem': 'Design System',
 
   'common.skipToContent': 'Skip to main content',
