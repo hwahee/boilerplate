@@ -290,12 +290,6 @@ a {
   gap: var(--space-1);
 }
 
-/* A column can hold two lists (own pages, then /sitemap.json); keep the
-   item rhythm across the seam so they read as one. */
-.app-footer__list + .app-footer__list {
-  margin-top: var(--space-1);
-}
-
 /* Links inherit the footer's muted color instead of the primary accent —
    restraint is the point; hover adds an underline and nothing else. */
 .app-footer a {
@@ -335,9 +329,12 @@ a {
   margin-top: var(--space-4);
 }
 
+/* Three links now (design system, terms, privacy) — let them wrap on a phone
+   rather than push the line past the edge. */
 .app-footer__legal {
   display: flex;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
 }
 
 /* Opposite edges of a phone screen are far enough apart to read as unrelated,

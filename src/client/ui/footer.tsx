@@ -6,12 +6,15 @@
  * The identity row is closed with a hairline of its own — that rule is what
  * keeps the service's identity from reading as just another link column.
  *
- * The "Other Services" column opens with this service's own pages (they are
- * routes here, so they are localized and navigate without a reload), then
- * lists whatever `/sitemap.json` serves — adding a service is a data edit
- * (see `public/sitemap.json`) rather than a change here. While that list
- * loads — or if it fails — it is simply omitted: chrome below the fold should
- * never show a spinner or an error banner.
+ * The "Other Services" column is data-driven: it renders whatever
+ * `/sitemap.json` serves, so adding a service is a data edit (see
+ * `public/sitemap.json`) rather than a change here. While that list loads —
+ * or if it fails — the column heading stays and the list is simply omitted:
+ * chrome below the fold should never show a spinner or an error banner.
+ *
+ * This service's own reference pages (the design system) are not services, so
+ * they sit in the bottom line beside the legal links — site information, not
+ * destinations. They move to a sidebar if the app grows one.
  */
 import { NavLink } from 'react-router';
 
@@ -68,16 +71,6 @@ export function Footer() {
           <h2 className="app-footer__heading" id="footer-services-heading">
             {t('footer.otherServices')}
           </h2>
-          {/* Separate from the sitemap list on purpose: app.footer.services
-              appearing is the automation signal that /sitemap.json arrived. */}
-          <ul className="app-footer__list">
-            <li>
-              {/* NavLink marks the link aria-current="page" while on it. */}
-              <NavLink to="/design-system" data-testid={TESTID.app.navDesignSystem}>
-                {t('nav.designSystem')}
-              </NavLink>
-            </li>
-          </ul>
           {services.length > 0 && (
             <ul className="app-footer__list" data-testid={TESTID.app.footerServices}>
               {services.map((service) => (
@@ -115,6 +108,11 @@ export function Footer() {
           {t('footer.copyright', { year: new Date().getFullYear(), site: SITE_NAME })}
         </small>
         <nav className="app-footer__legal" data-testid={TESTID.app.footerLegal}>
+          {/* A route, so it is localized and navigates without a reload;
+              NavLink marks it aria-current="page" while on it. */}
+          <NavLink to="/design-system" data-testid={TESTID.app.navDesignSystem}>
+            {t('nav.designSystem')}
+          </NavLink>
           {LEGAL_LINKS.map((link) => (
             <a key={link.key} href={link.href}>
               {t(link.key)}

@@ -71,7 +71,7 @@
 
 테마·디자인·언어 컨트롤(`app.controls.*`)은 헤더가 아니라 푸터의 정체성 행에 있습니다 — testid는 그대로이므로 selector는 바뀌지 않지만, 스크롤이 필요할 수 있습니다.
 
-헤더에는 내비게이션이 없습니다. 디자인 시스템 링크(`app.nav.design-system`)는 푸터 "관련 서비스" 컬럼의 첫 항목으로 옮겼고 testid는 그대로입니다. 할 일 링크(`app.nav.todos`)는 없어졌고, 홈으로는 헤더의 서비스명(`app.header.home-link`)으로 갑니다.
+헤더에는 내비게이션이 없습니다. 디자인 시스템 링크(`app.nav.design-system`)는 푸터 하단 줄의 약관 링크 앞(`app.footer.legal` 안)으로 옮겼고 testid는 그대로입니다. 할 일 링크(`app.nav.todos`)는 없어졌고, 홈으로는 헤더의 서비스명(`app.header.home-link`)으로 갑니다.
 
 푸터의 `app.footer.services`는 `/sitemap.json` 응답이 도착한 뒤에만 존재합니다 — 서비스 목록을 검증하는 테스트는 이 요소의 등장을 기다리세요. 로딩·실패 시에는 컬럼 제목만 남고 목록 자체가 렌더링되지 않으므로, 그 상태를 나타내는 별도 신호는 없습니다.
 
