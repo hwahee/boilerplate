@@ -5,7 +5,7 @@
 
 | PR                                                   | 내용                                                                        | main 머지 순서 |
 | ---------------------------------------------------- | --------------------------------------------------------------------------- | -------------- |
-| [#29](https://github.com/hwahee/boilerplate/pull/29) | 파일 업로드 API, 저장소 드라이버(local/s3/gdrive), `files` 테이블, CDN 주소 | 1              |
+| [#30](https://github.com/hwahee/boilerplate/pull/30) | 파일 업로드 API, 저장소 드라이버(local/s3/gdrive), `files` 테이블, CDN 주소 | 1              |
 
 파일을 올리면(`POST /api/files`) 바이트는 설정된 저장소(`STORAGE_DRIVER`)에, 나머지 정보는 `files` 테이블에
 들어가고, 캐시할 수 있는 주소(`/files/{id}.{확장자}`, `CDN_BASE_URL`이 있으면 CDN 주소)가 돌아옵니다.
