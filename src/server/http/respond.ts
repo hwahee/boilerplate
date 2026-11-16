@@ -5,8 +5,8 @@
  *   - the repo-wide error envelope (@shared/api/errors), localized
  *   - deployment-version handshake (@shared/api/version)
  *   - CORS preflight + response headers
- *   - mapping of domain errors (ValidationError, UnauthorizedError, NotFoundError)
- *     to HTTP
+ *   - mapping of domain errors (ValidationError, UnauthorizedError,
+ *     ForbiddenError, NotFoundError, PayloadTooLargeError) to HTTP
  */
 import type { ApiErrorBody, ApiErrorCode } from '@shared/api/errors';
 import { APP_VERSION, VERSION_HEADER } from '@shared/api/version';
@@ -14,7 +14,12 @@ import type { MessageKey } from '@shared/i18n';
 import { ValidationError } from '@shared/validation';
 
 import type { ServerConfig } from '../config';
-import { NotFoundError, UnauthorizedError } from '../lib/errors';
+import {
+  ForbiddenError,
+  NotFoundError,
+  PayloadTooLargeError,
+  UnauthorizedError,
+} from '../lib/errors';
 import type { Logger } from '../lib/log';
 import { createRequestContext, type RequestContext } from './context';
 import { corsHeaders, preflightResponse } from './cors';
@@ -29,7 +34,9 @@ export function json(data: unknown, init: ResponseInit = {}): Response {
 const ERROR_MESSAGE_KEYS: Record<ApiErrorCode, MessageKey> = {
   VALIDATION_ERROR: 'error.validation',
   UNAUTHORIZED: 'error.unauthorized',
+  FORBIDDEN: 'error.forbidden',
   NOT_FOUND: 'error.notFound',
+  PAYLOAD_TOO_LARGE: 'error.payloadTooLarge',
   VERSION_MISMATCH: 'error.versionMismatch',
   INTERNAL_ERROR: 'error.internal',
 };
@@ -124,6 +131,12 @@ function mapError(error: unknown, ctx: RequestContext, log: Logger): Response {
   }
   if (error instanceof UnauthorizedError) {
     return errorResponse(401, 'UNAUTHORIZED', ctx);
+  }
+  if (error instanceof ForbiddenError) {
+    return errorResponse(403, 'FORBIDDEN', ctx);
+  }
+  if (error instanceof PayloadTooLargeError) {
+    return errorResponse(413, 'PAYLOAD_TOO_LARGE', ctx, { maxBytes: error.maxBytes });
   }
   if (error instanceof NotFoundError) {
     return errorResponse(404, 'NOT_FOUND', ctx, { resource: error.resource, id: error.id });

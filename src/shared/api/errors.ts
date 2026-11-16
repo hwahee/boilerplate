@@ -13,7 +13,11 @@ export type ApiErrorCode =
   | 'VALIDATION_ERROR'
   /** 401 — the request carries no (valid) signed-in user. */
   | 'UNAUTHORIZED'
+  /** 403 — signed in, but not allowed to do this (e.g. deleting someone else's file). */
+  | 'FORBIDDEN'
   | 'NOT_FOUND'
+  /** 413 — the upload is larger than the server accepts; `details.maxBytes` says how large. */
+  | 'PAYLOAD_TOO_LARGE'
   | 'VERSION_MISMATCH'
   | 'INTERNAL_ERROR';
 
