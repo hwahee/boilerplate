@@ -8,7 +8,7 @@
  * construct services themselves.
  *
  * The container also owns driver selection (postgres vs memory persistence,
- * memory vs redis pub/sub), so swapping infrastructure is invisible to
+ * memory vs redis pub/sub, local vs S3 vs Google Drive file storage), so swapping infrastructure is invisible to
  * services and routes.
  */
 import { createOidcClient, type OidcClient } from './auth/oidc';
@@ -22,6 +22,7 @@ import {
   createMemoryAuditLogRepository,
   createMemoryChatMessageRepository,
   createMemoryChatRoomRepository,
+  createMemoryFileRepository,
   createMemoryTodoRepository,
   createMemoryUnitOfWork,
   MemoryStore,
@@ -30,17 +31,21 @@ import {
   createPostgresAuditLogRepository,
   createPostgresChatMessageRepository,
   createPostgresChatRoomRepository,
+  createPostgresFileRepository,
   createPostgresTodoRepository,
 } from './repositories/postgres';
 import type {
   AuditLogRepository,
   ChatMessageRepository,
   ChatRoomRepository,
+  FileRepository,
   TodoRepository,
   UnitOfWork,
 } from './repositories/types';
 import { ChatService } from './services/chat-service';
+import { FileService } from './services/file-service';
 import { TodoService } from './services/todo-service';
+import { createBlobStore, type BlobStore } from './storage';
 
 export interface Container {
   readonly config: ServerConfig;
@@ -51,6 +56,8 @@ export interface Container {
   chatService(): ChatService;
   /** This process's chat sockets — one per process, like everything here. */
   chatGateway(): ChatGateway;
+  /** Uploads: bytes in the blob store (STORAGE_DRIVER), the rest in the database. */
+  fileService(): FileService;
   pubsub(): PubSub;
   /** Health probe: is the persistence layer reachable? */
   dbPing(): Promise<boolean>;
@@ -75,6 +82,7 @@ export interface ContainerOverrides {
   log?: Logger;
   pubsub?: PubSub;
   presence?: PresenceStore;
+  blobs?: BlobStore;
 }
 
 export function createContainer(
@@ -111,6 +119,11 @@ export function createContainer(
     config.dbDriver === 'postgres'
       ? createPostgresChatMessageRepository(postgres())
       : createMemoryChatMessageRepository(memoryStore()),
+  );
+  const fileRepository = lazy<FileRepository>(() =>
+    config.dbDriver === 'postgres'
+      ? createPostgresFileRepository(postgres())
+      : createMemoryFileRepository(memoryStore()),
   );
   const unitOfWork = lazy<UnitOfWork>(() =>
     config.dbDriver === 'postgres'
@@ -157,6 +170,16 @@ export function createContainer(
       }),
   );
 
+  const fileService = lazy(
+    () =>
+      new FileService({
+        files: fileRepository(),
+        blobs: overrides.blobs ?? createBlobStore(config),
+        config,
+        log,
+      }),
+  );
+
   return {
     config,
     log,
@@ -164,6 +187,7 @@ export function createContainer(
     oidcClient,
     chatService,
     chatGateway,
+    fileService,
     pubsub,
     async dbPing() {
       if (config.dbDriver === 'memory') return true;

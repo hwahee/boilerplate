@@ -70,6 +70,17 @@ export const ko: Record<MessageKey, string> = {
   'chat.send': '보내기',
   'chat.sendFailed': '메시지를 보내지 못했습니다.',
 
+  'files.title': '파일 업로드',
+  'files.description':
+    '올린 파일은 설정된 저장소에 들어가고, 캐시할 수 있는 주소로 돌아옵니다. 아래는 이 탭에서 올린 파일입니다.',
+  'files.guestHint': '로그인하면 파일을 올릴 수 있습니다.',
+  'files.pickLabel': '올릴 파일',
+  'files.uploading': '올리는 중…',
+  'files.uploadFailed': '파일을 올리지 못했습니다.',
+  'files.tooLarge': '파일이 제한({max})보다 큽니다.',
+  'files.deleteFile': '"{name}" 삭제',
+  'files.deleteFailed': '파일을 삭제하지 못했습니다.',
+
   'palette.recent': '최근 사용',
   'palette.hexLabel': 'HEX 값',
   'palette.hexInvalid': '#5b5bd6 또는 #5b5bd680 형식으로 입력하세요.',
@@ -102,7 +113,9 @@ export const ko: Record<MessageKey, string> = {
 
   'error.validation': '요청에 잘못된 데이터가 포함되어 있습니다.',
   'error.unauthorized': '로그인이 필요합니다.',
+  'error.forbidden': '이 작업을 할 권한이 없습니다.',
   'error.notFound': '요청한 리소스를 찾을 수 없습니다.',
+  'error.payloadTooLarge': '파일이 너무 큽니다.',
   'error.internal': '예기치 않은 오류가 발생했습니다. 다시 시도해 주세요.',
   'error.versionMismatch': '새 버전이 배포되었습니다. 페이지를 새로고침합니다.',
 };

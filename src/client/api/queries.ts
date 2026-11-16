@@ -10,7 +10,7 @@ import type { Todo, TodoStatus } from '@shared/domain/todo';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { authApi, sitemapApi, todosApi, type TodoListQueryInput } from './endpoints';
+import { authApi, filesApi, sitemapApi, todosApi, type TodoListQueryInput } from './endpoints';
 import { ApiRequestError } from './http';
 
 const todoKeys = {
@@ -104,6 +104,19 @@ export function useDeleteTodo() {
     mutationFn: (id: string) => todosApi.remove(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: todoKeys.lists() }),
   });
+}
+
+/**
+ * Uploads a file. There is no list of files on the server to invalidate: the
+ * caller keeps the returned `StoredFile` wherever the file belongs (a post's
+ * body, an avatar field).
+ */
+export function useUploadFile() {
+  return useMutation({ mutationFn: (file: File) => filesApi.upload(file) });
+}
+
+export function useDeleteFile() {
+  return useMutation({ mutationFn: (id: string) => filesApi.remove(id) });
 }
 
 /**

@@ -4,6 +4,9 @@ node_modules/
 # Build output
 dist/
 
+# Uploaded files (STORAGE_DRIVER=local, the local default directory)
+/storage/
+
 # Secrets — never commit real environment values. Use .env.example as the template.
 .env
 .env.*
