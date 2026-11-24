@@ -73,7 +73,7 @@ DB 없이 바로 실행하려면 `.env`에서 `DB_DRIVER=memory`로 바꾸면 �
 | ------------------------- | ----------------------------------------------------------------------- |
 | `bun run dev`             | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                            |
 | `bun test`                | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행   |
-| `bun run check`           | prettier + eslint + tsc + knip + test 전체 게이트 (pre-push와 동일)     |
+| `bun run check`           | prettier + eslint + tsc + knip + test 전체 게이트 (CI와 동일)           |
 | `bun run build`           | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)      |
 | `bun run start`           | 빌드 산출물 실행                                                        |
 | `bun run db:*`            | `db:up` / `db:migrate` / `db:seed` / `db:setup`                         |
@@ -309,8 +309,8 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 
 - **GitHub Actions** (`.github/workflows/ci.yml`): 모든 push마다
   prettier → eslint → tsc → knip → test → build.
-- **husky + lint-staged**: pre-commit에 staged 파일 lint/format, pre-push에
-  `bun run check` 전체 게이트.
+- **husky + lint-staged**: pre-commit에 staged 파일 lint/format. push 전 전체 게이트는 두지 않으며
+  (CI가 대신함), 필요할 때 `bun run check`를 직접 돌립니다.
 - **React Compiler**: 배포 빌드는 Bun 내장 React Compiler(실험 기능)로 `.tsx` 컴포넌트를 컴파일해,
   입력이 그대로인 JSX·계산값을 재사용하는 코드를 빌드 시점에 넣습니다. 그래서 속도만을 위한
   `memo`/`useMemo`/`useCallback`은 직접 쓰지 않습니다. 개발 서버와 `.ts` 파일(훅 등)은 컴파일되지

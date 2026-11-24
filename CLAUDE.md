@@ -4,7 +4,10 @@
 
 ## 검증
 
-- 변경 후에는 `bun run check`를 돌립니다 (prettier → eslint → tsc → knip → test, CI와 동일).
+- push 전에 `bun run check`(prettier → eslint → tsc → knip → test, CI와 동일)를 강제하는 훅은 없습니다.
+  GitHub CI가 push마다 같은 검사를 돌립니다.
+- `bun run check`를 돌릴지는 스스로 판단합니다. 코드·타입·테스트·설정에 영향이 있는 변경이면 push 전에 돌리고,
+  문서만 고친 경우처럼 실패할 여지가 없으면 생략합니다. 일부만 필요하면 해당 명령(`bun test`, `bun run typecheck` 등)만 돌립니다.
 
 ## 업스트림 업데이트 적용
 

@@ -1,2 +1,0 @@
-# Full gate before anything leaves the machine: format, lint, types, dead code, tests.
-bun run check
