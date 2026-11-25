@@ -310,7 +310,7 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 - **GitHub Actions** (`.github/workflows/ci.yml`): 모든 push마다
   prettier → eslint → tsc → knip → test → build.
 - **husky + lint-staged**: pre-commit에 staged 파일 lint/format. push 전 전체 게이트는 두지 않으며
-  (CI가 대신함), 필요할 때 `bun run check`를 직접 돌립니다.
+  (CI가 대신함), 필요할 때만 `bun run check`를 직접 돌립니다.
 - **React Compiler**: 배포 빌드는 Bun 내장 React Compiler(실험 기능)로 `.tsx` 컴포넌트를 컴파일해,
   입력이 그대로인 JSX·계산값을 재사용하는 코드를 빌드 시점에 넣습니다. 그래서 속도만을 위한
   `memo`/`useMemo`/`useCallback`은 직접 쓰지 않습니다. 개발 서버와 `.ts` 파일(훅 등)은 컴파일되지

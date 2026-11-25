@@ -4,10 +4,16 @@
 
 ## 검증
 
-- push 전에 `bun run check`(prettier → eslint → tsc → knip → test, CI와 동일)를 강제하는 훅은 없습니다.
-  GitHub CI가 push마다 같은 검사를 돌립니다.
-- `bun run check`를 돌릴지는 스스로 판단합니다. 코드·타입·테스트·설정에 영향이 있는 변경이면 push 전에 돌리고,
-  문서만 고친 경우처럼 실패할 여지가 없으면 생략합니다. 일부만 필요하면 해당 명령(`bun test`, `bun run typecheck` 등)만 돌립니다.
+- 검증은 GitHub CI에 맡깁니다. CI가 push마다 `bun run check`와 같은 검사(prettier → eslint → tsc → knip →
+  test)를 돌리고, pre-commit 훅이 staged 파일의 lint/format을 이미 맞춥니다.
+- **기본은 push 전에 `bun run check`를 돌리지 않는 것입니다.** 코드를 고친 경우도 마찬가지입니다.
+  CI가 실패하면 그때 실패한 단계만 로컬에서 재현해 고칩니다.
+- 아래의 경우에만 예외로 돌리고, 그때도 전체가 아니라 필요한 명령 하나(`bun test <파일>`,
+  `bun run typecheck` 등)를 우선합니다.
+  - 사용자가 검사를 요청했을 때
+  - CI 실패를 고치는 중이라 고친 내용이 통과하는지 확인해야 할 때
+  - 의존성 업그레이드, 여러 파일에 걸친 타입·시그니처 변경처럼 CI에서 실패할 가능성이 높고
+    실패하면 여러 번 왕복할 것이 뻔할 때
 
 ## 업스트림 업데이트 적용
 
