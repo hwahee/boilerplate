@@ -44,7 +44,9 @@ function Header() {
         <h1 className="app-header__title">
           <Link to="/" data-testid={TESTID.app.homeLink}>
             <BrandLogo />
-            {brand.title}
+            <span className={brand.titleVisible ? undefined : 'visually-hidden'}>
+              {brand.title}
+            </span>
           </Link>
         </h1>
         {brand.tagline && <p className="app-header__tagline muted">{brand.tagline}</p>}

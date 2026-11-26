@@ -10,11 +10,12 @@
  *   1. Title and tagline (header and footer): the `app.title` and `app.tagline`
  *      keys in `src/shared/i18n/messages/ko.ts` AND `en.ts`. Also update the
  *      `<title>` in `src/client/index.html` to match.
- *      Rules: the service always has a title OR a logo (an empty title is
- *      allowed only with a `LOGO`, and then `LOGO.alt` is required, since it
- *      is the service's only name). The tagline is optional (empty string =
- *      none) and is never shown without a title.
- *   2. Logo (optional, header and footer): set `LOGO` below.
+ *      Rules: the title always exists (never empty) — it is the service's
+ *      name for screen readers and the home link even when hidden. The
+ *      tagline is optional (empty string = none) and is shown only while the
+ *      title is visible.
+ *   2. Logo (optional, header and footer): set `LOGO` below. To show the logo
+ *      alone, also set `TITLE_VISIBLE = false` (needs a `LOGO`).
  *   3. Favicon: replace `src/client/assets/favicon.svg` (see index.html).
  */
 
@@ -27,8 +28,8 @@
  *   export const LOGO: Logo | null = { src: logoUrl };
  *
  * (`.svg`, `.png`, `.webp` imports are typed in `assets.d.ts`.) The image is
- * decorative when the title text is beside it, so it gets empty alt text
- * unless `alt` is given; with an empty title `alt` is REQUIRED. Use `srcDark` for a variant that
+ * decorative (the title always names the service, visible or not), so it gets
+ * empty alt text unless `alt` is given. Use `srcDark` for a variant that
  * reads on the dark theme when the default one does not.
  */
 export interface Logo {
@@ -40,24 +41,38 @@ export interface Logo {
 
 export const LOGO: Logo | null = null;
 
+/**
+ * Whether the title text is shown. `false` hides it visually only (it stays
+ * for screen readers) and hides the tagline too; requires a `LOGO`.
+ */
+export const TITLE_VISIBLE = true;
+
 export interface ResolvedBrand {
   logo: Logo | null;
-  /** Empty when the service is identified by its logo alone. */
+  /** Always non-empty. */
   title: string;
-  /** Empty when there is none, and always empty when there is no title. */
+  titleVisible: boolean;
+  /** Empty when there is none or the title is hidden. */
   tagline: string;
 }
 
 /** The title/tagline/logo header and footer actually show (rules above). */
-export function resolveBrand(title: string, tagline: string, logo: Logo | null): ResolvedBrand {
-  const t = title.trim();
-  return { logo, title: t, tagline: t ? tagline.trim() : '' };
+export function resolveBrand(
+  title: string,
+  tagline: string,
+  logo: Logo | null,
+  titleVisible: boolean = TITLE_VISIBLE,
+): ResolvedBrand {
+  return { logo, title, titleVisible, tagline: titleVisible ? tagline.trim() : '' };
 }
 
 /** Why a title/logo combination breaks the rules, or null when it is valid. */
-export function brandProblem(title: string, logo: Logo | null): string | null {
-  if (title.trim()) return null;
-  if (!logo) return 'No title and no logo: the service needs at least one.';
-  if (!logo.alt?.trim()) return 'No title: LOGO.alt is required, it is the only name.';
+export function brandProblem(
+  title: string,
+  logo: Logo | null,
+  titleVisible: boolean = TITLE_VISIBLE,
+): string | null {
+  if (!title.trim()) return 'The title is required, even when hidden.';
+  if (!titleVisible && !logo) return 'A hidden title needs a LOGO to identify the service.';
   return null;
 }

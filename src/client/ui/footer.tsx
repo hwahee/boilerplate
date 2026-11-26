@@ -65,7 +65,9 @@ export function Footer() {
         <div>
           <p className="app-footer__brand">
             <BrandLogo />
-            {brand.title}
+            <span className={brand.titleVisible ? undefined : 'visually-hidden'}>
+              {brand.title}
+            </span>
           </p>
           {brand.tagline && <p className="app-footer__tagline">{brand.tagline}</p>}
         </div>
