@@ -11,6 +11,7 @@ import { BrowserRouter, Link, Outlet, Route, Routes } from 'react-router';
 
 import { isRetryableError } from './api/http';
 import { AccountControls } from './auth/account-controls';
+import { LOGO, resolveBrand } from './brand';
 import { LocaleProvider, useI18n } from './i18n/locale-context';
 import { DesignSystemPage } from './pages/design-system-page';
 import { HomePage } from './pages/home-page';
@@ -34,6 +35,7 @@ const queryClient = new QueryClient({
 
 function Header() {
   const { t } = useI18n();
+  const brand = resolveBrand(t('app.title'), t('app.tagline'), LOGO);
 
   return (
     <header className="app-header" data-testid={TESTID.app.header}>
@@ -42,10 +44,10 @@ function Header() {
         <h1 className="app-header__title">
           <Link to="/" data-testid={TESTID.app.homeLink}>
             <BrandLogo />
-            {t('app.title')}
+            {brand.title}
           </Link>
         </h1>
-        <p className="app-header__tagline muted">{t('app.tagline')}</p>
+        {brand.tagline && <p className="app-header__tagline muted">{brand.tagline}</p>}
       </div>
 
       {/* Signing in stays up here; the preference switches that used to share

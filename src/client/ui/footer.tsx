@@ -21,6 +21,7 @@ import { NavLink } from 'react-router';
 import type { MessageKey } from '@shared/i18n';
 
 import { useSitemap } from '../api/queries';
+import { LOGO, resolveBrand } from '../brand';
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
 import { AppControls } from './app-controls';
@@ -56,6 +57,7 @@ export function Footer() {
   const { t } = useI18n();
   const { data: sitemap } = useSitemap();
   const services = sitemap?.services ?? [];
+  const brand = resolveBrand(t('app.title'), t('app.tagline'), LOGO);
 
   return (
     <footer className="app-footer" data-testid={TESTID.app.footer}>
@@ -63,9 +65,9 @@ export function Footer() {
         <div>
           <p className="app-footer__brand">
             <BrandLogo />
-            {t('app.title')}
+            {brand.title}
           </p>
-          <p className="app-footer__tagline">{t('app.tagline')}</p>
+          {brand.tagline && <p className="app-footer__tagline">{brand.tagline}</p>}
         </div>
         <AppControls />
       </div>
