@@ -152,8 +152,47 @@ a {
   border-bottom: var(--border-width) solid var(--color-border);
 }
 
-.app-header__brand {
-  margin-right: auto;
+/* Header and footer identity: [logo] [title over tagline]. The logo column is
+   absent without a logo; a hidden title is out of flow, so the text column
+   then holds nothing and takes no space. */
+.brand {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Takes the room the controls leave (never wraps below them); its width must
+   not depend on its text — use-brand-collapse measures against it. */
+.app-header .brand,
+.app-footer__identity .brand {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* With a logo the text stays on one line; when it does not fit, only the logo
+   remains and the text is hidden visually (same recipe as .visually-hidden). */
+.brand--logo .brand__text {
+  white-space: nowrap;
+}
+
+.brand--collapsed .brand__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.brand__logo {
+  display: flex;
+  flex: none;
+}
+
+.brand__text {
+  display: flex;
+  flex-direction: column;
 }
 
 .app-header__title {
@@ -1801,4 +1840,22 @@ dialog.overlay[data-variant='sidebar'] .overlay__panel {
   100% {
     transform: scale(1);
   }
+}
+
+/* Service logo (src/client/brand.ts) beside the title, header and footer. */
+.brand-logo {
+  height: 2.5rem;
+  width: auto;
+}
+
+.brand-logo--dark {
+  display: none;
+}
+
+:root[data-theme='dark'] .brand-logo--light {
+  display: none;
+}
+
+:root[data-theme='dark'] .brand-logo--dark {
+  display: inline;
 }
