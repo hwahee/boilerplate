@@ -18,6 +18,7 @@ import { NotFoundPage } from './pages/not-found-page';
 import { SignInFailedPage } from './pages/sign-in-failed-page';
 import { TESTID } from './testing/testids';
 import { ThemeProvider } from './theme/theme-context';
+import { BrandLogo } from './ui/brand-logo';
 import { Footer } from './ui/footer';
 import { OverlayProvider } from './ui/overlay';
 
@@ -40,6 +41,7 @@ function Header() {
         {/* With no nav row, the service name is the way home from any page. */}
         <h1 className="app-header__title">
           <Link to="/" data-testid={TESTID.app.homeLink}>
+            <BrandLogo />
             {t('app.title')}
           </Link>
         </h1>

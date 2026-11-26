@@ -306,6 +306,10 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 
 ## 클라이언트
 
+- **브랜딩** (`src/client/brand.ts`): 헤더·푸터의 제목/부제목(`app.title`/`app.tagline` i18n 키, ko·en 둘 다)과
+  `<title>`은 보일러플레이트의 것이므로, 이 보일러플레이트로 만든 서비스는 **서비스의 의도에 맞게 바꾸는 것을
+  권장**합니다(AI 에이전트도 첫 작업에서 바꿉니다). 로고는 `brand.ts`의 `LOGO`에 이미지를 지정하면 제목 앞에 들어가고
+  (`null`이면 없음), 파비콘은 `src/client/assets/favicon.svg`를 교체하면 됩니다.
 - **API 카탈로그**: 모든 엔드포인트는 `src/client/api/endpoints.ts` 한 곳에 상세 주석과
   함께 정의됩니다. 컴포넌트는 `fetch`를 직접 부르지 않고 이 카탈로그(또는 그 위의
   TanStack Query 훅 `queries.ts`)만 사용합니다.

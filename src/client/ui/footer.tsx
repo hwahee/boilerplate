@@ -24,6 +24,7 @@ import { useSitemap } from '../api/queries';
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
 import { AppControls } from './app-controls';
+import { BrandLogo } from './brand-logo';
 
 /** The domain every service on this footer belongs to. */
 const SITE_NAME = 'hwahee.com';
@@ -60,7 +61,10 @@ export function Footer() {
     <footer className="app-footer" data-testid={TESTID.app.footer}>
       <div className="app-footer__identity">
         <div>
-          <p className="app-footer__brand">{t('app.title')}</p>
+          <p className="app-footer__brand">
+            <BrandLogo />
+            {t('app.title')}
+          </p>
           <p className="app-footer__tagline">{t('app.tagline')}</p>
         </div>
         <AppControls />
