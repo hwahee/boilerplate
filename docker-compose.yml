@@ -41,8 +41,14 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app_local_password}@db:5432/${POSTGRES_DB:-app}
       CORS_ORIGINS: ''
       SERVER_ROLE: all
+      # Uploads on a named volume: they outlive the container.
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
     ports:
       - '3000:3000'
 
 volumes:
   db-data:
+  uploads:

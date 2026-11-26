@@ -16,3 +16,19 @@ export class UnauthorizedError extends Error {
     this.name = 'UnauthorizedError';
   }
 }
+
+/** The caller is known, and this is not theirs to do. */
+export class ForbiddenError extends Error {
+  constructor() {
+    super('not allowed');
+    this.name = 'ForbiddenError';
+  }
+}
+
+/** The request body is larger than the server accepts. */
+export class PayloadTooLargeError extends Error {
+  constructor(readonly maxBytes: number) {
+    super(`payload larger than ${maxBytes} bytes`);
+    this.name = 'PayloadTooLargeError';
+  }
+}

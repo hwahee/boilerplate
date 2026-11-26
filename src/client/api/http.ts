@@ -2,7 +2,8 @@
  * The one HTTP transport used by every API call.
  *
  * Responsibilities:
- *   - JSON encoding/decoding against same-origin `/api/*`
+ *   - JSON encoding/decoding against same-origin `/api/*` (a `FormData` body —
+ *     a file upload — goes out as multipart instead)
  *   - sending the build-version header (deployment-skew handshake — see
  *     @shared/api/version): on 409 VERSION_MISMATCH the page reloads once to
  *     pick up assets matching the newly deployed server
@@ -40,6 +41,7 @@ export function isRetryableError(error: unknown): boolean {
 
 interface ApiFetchOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  /** Sent as JSON — except a `FormData`, which the browser sends as multipart. */
   body?: unknown;
   /** Appended to the URL; `undefined` values are dropped. */
   searchParams?: Record<string, string | number | undefined>;
@@ -58,15 +60,20 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     if (value !== undefined) url.searchParams.set(name, String(value));
   }
 
+  const { body } = options;
+  // The browser writes a multipart content-type (with its boundary) itself.
+  const isJsonBody = body !== undefined && !(body instanceof FormData);
+
   const response = await fetch(url, {
     method: options.method ?? 'GET',
     headers: {
       accept: 'application/json',
       'accept-language': document.documentElement.lang || 'en',
       [VERSION_HEADER]: APP_VERSION,
-      ...(options.body !== undefined ? { 'content-type': 'application/json' } : {}),
+      ...(isJsonBody ? { 'content-type': 'application/json' } : {}),
     },
-    ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+    ...(body instanceof FormData ? { body } : {}),
+    ...(isJsonBody ? { body: JSON.stringify(body) } : {}),
   });
 
   if (response.status === 204) return undefined as T;

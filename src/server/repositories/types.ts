@@ -92,3 +92,26 @@ export interface AuditLogEntry {
 export interface AuditLogRepository {
   append(entry: AuditLogEntry, session?: DbSession): Promise<void>;
 }
+
+/** An uploaded file as this service keeps it; its bytes are in the blob store. */
+export interface FileRecord {
+  id: string;
+  /** The member who uploaded it; `null` when uploaded without sign-in (AUTH_DRIVER=none). */
+  ownerId: string | null;
+  /** The name it was uploaded under — for display and downloads, never a path. */
+  name: string;
+  contentType: string;
+  size: number;
+  /** Hex SHA-256 of the bytes; served as the ETag. */
+  sha256: string;
+  /** What the blob store returned from `put` (src/server/storage/types.ts). */
+  storageRef: string;
+  createdAt: UtcIsoString;
+}
+
+export interface FileRepository {
+  insert(file: FileRecord, session?: DbSession): Promise<void>;
+  findById(id: string, session?: DbSession): Promise<FileRecord | null>;
+  /** Returns `false` when no row matched. */
+  deleteById(id: string, session?: DbSession): Promise<boolean>;
+}

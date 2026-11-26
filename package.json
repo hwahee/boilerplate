@@ -25,6 +25,7 @@
     "db:seed": "bun run scripts/seed.ts",
     "db:setup": "bun run db:up && bun run scripts/wait-for-db.ts && bun run db:migrate && bun run db:seed",
     "chat:load": "bun run scripts/chat-load.ts",
+    "storage:gdrive-setup": "bun run scripts/gdrive-setup.ts",
     "prepare": "husky"
   },
   "lint-staged": {
