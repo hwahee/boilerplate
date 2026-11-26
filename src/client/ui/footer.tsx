@@ -25,7 +25,8 @@ import { LOGO, resolveBrand } from '../brand';
 import { useI18n } from '../i18n/locale-context';
 import { TESTID } from '../testing/testids';
 import { AppControls } from './app-controls';
-import { BrandLogo } from './brand-logo';
+import { BrandLogo, brandClass } from './brand-logo';
+import { useBrandCollapse } from './use-brand-collapse';
 
 /** The domain every service on this footer belongs to. */
 const SITE_NAME = 'hwahee.com';
@@ -58,18 +59,25 @@ export function Footer() {
   const { data: sitemap } = useSitemap();
   const services = sitemap?.services ?? [];
   const brand = resolveBrand(t('app.title'), t('app.tagline'), LOGO);
+  const { ref, collapsed } = useBrandCollapse(!!LOGO, brand.title + brand.tagline);
 
   return (
     <footer className="app-footer" data-testid={TESTID.app.footer}>
       <div className="app-footer__identity">
-        <div>
-          <p className="app-footer__brand">
-            <BrandLogo />
-            <span className={brand.titleVisible ? undefined : 'visually-hidden'}>
-              {brand.title}
+        <div ref={ref} className={brandClass(!!LOGO, collapsed)}>
+          {LOGO && (
+            <span className="brand__logo">
+              <BrandLogo />
             </span>
-          </p>
-          {brand.tagline && <p className="app-footer__tagline">{brand.tagline}</p>}
+          )}
+          <div className="brand__text">
+            <p className="app-footer__brand">
+              <span className={brand.titleVisible ? undefined : 'visually-hidden'}>
+                {brand.title}
+              </span>
+            </p>
+            {brand.tagline && <p className="app-footer__tagline">{brand.tagline}</p>}
+          </div>
         </div>
         <AppControls />
       </div>

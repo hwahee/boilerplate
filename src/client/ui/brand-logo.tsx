@@ -20,3 +20,10 @@ export function BrandLogo() {
     </>
   );
 }
+
+/** Class of the `.brand` row; `collapsed` leaves the logo alone (see use-brand-collapse). */
+export function brandClass(hasLogo: boolean, collapsed: boolean): string {
+  return ['brand', hasLogo && 'brand--logo', collapsed && 'brand--collapsed']
+    .filter(Boolean)
+    .join(' ');
+}

@@ -19,8 +19,9 @@ import { NotFoundPage } from './pages/not-found-page';
 import { SignInFailedPage } from './pages/sign-in-failed-page';
 import { TESTID } from './testing/testids';
 import { ThemeProvider } from './theme/theme-context';
-import { BrandLogo } from './ui/brand-logo';
+import { BrandLogo, brandClass } from './ui/brand-logo';
 import { Footer } from './ui/footer';
+import { useBrandCollapse } from './ui/use-brand-collapse';
 import { OverlayProvider } from './ui/overlay';
 
 const queryClient = new QueryClient({
@@ -36,20 +37,29 @@ const queryClient = new QueryClient({
 function Header() {
   const { t } = useI18n();
   const brand = resolveBrand(t('app.title'), t('app.tagline'), LOGO);
+  const { ref, collapsed } = useBrandCollapse(!!LOGO, brand.title + brand.tagline);
 
   return (
     <header className="app-header" data-testid={TESTID.app.header}>
-      <div className="app-header__brand">
-        {/* With no nav row, the service name is the way home from any page. */}
-        <h1 className="app-header__title">
-          <Link to="/" data-testid={TESTID.app.homeLink}>
+      <div ref={ref} className={brandClass(!!LOGO, collapsed)}>
+        {/* Decorative: the title link beside it is the way home for keyboards
+            and screen readers. */}
+        {LOGO && (
+          <Link to="/" className="brand__logo" tabIndex={-1} aria-hidden="true">
             <BrandLogo />
-            <span className={brand.titleVisible ? undefined : 'visually-hidden'}>
-              {brand.title}
-            </span>
           </Link>
-        </h1>
-        {brand.tagline && <p className="app-header__tagline muted">{brand.tagline}</p>}
+        )}
+        <div className="brand__text">
+          {/* With no nav row, the service name is the way home from any page. */}
+          <h1 className="app-header__title">
+            <Link to="/" data-testid={TESTID.app.homeLink}>
+              <span className={brand.titleVisible ? undefined : 'visually-hidden'}>
+                {brand.title}
+              </span>
+            </Link>
+          </h1>
+          {brand.tagline && <p className="app-header__tagline muted">{brand.tagline}</p>}
+        </div>
       </div>
 
       {/* Signing in stays up here; the preference switches that used to share
