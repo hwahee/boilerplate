@@ -74,6 +74,17 @@ export const en = {
   'chat.send': 'Send',
   'chat.sendFailed': 'The message could not be sent.',
 
+  'files.title': 'File upload',
+  'files.description':
+    'Uploads go to the configured storage and come back as a cacheable address. This list is what this tab uploaded.',
+  'files.guestHint': 'Sign in to upload files.',
+  'files.pickLabel': 'File to upload',
+  'files.uploading': 'Uploading…',
+  'files.uploadFailed': 'The file could not be uploaded.',
+  'files.tooLarge': 'The file is larger than the {max} limit.',
+  'files.deleteFile': 'Delete "{name}"',
+  'files.deleteFailed': 'The file could not be deleted.',
+
   'palette.recent': 'Recently used',
   'palette.hexLabel': 'Hex value',
   'palette.hexInvalid': 'Use a color like #5b5bd6 or #5b5bd680.',
@@ -106,7 +117,9 @@ export const en = {
 
   'error.validation': 'The request contains invalid data.',
   'error.unauthorized': 'Please sign in to continue.',
+  'error.forbidden': 'You are not allowed to do this.',
   'error.notFound': 'The requested resource was not found.',
+  'error.payloadTooLarge': 'The file is too large.',
   'error.internal': 'An unexpected error occurred. Please try again.',
   'error.versionMismatch':
     'A new version of the application has been deployed. The page will reload.',

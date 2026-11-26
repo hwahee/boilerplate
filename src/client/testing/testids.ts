@@ -54,6 +54,17 @@ export const TESTID = {
     paginationNext: 'todos.pagination.next',
     paginationStatus: 'todos.pagination.status',
   },
+  uploads: {
+    section: 'uploads.section',
+    guestHint: 'uploads.guest-hint',
+    input: 'uploads.input',
+    uploading: 'uploads.uploading',
+    error: 'uploads.error',
+    list: 'uploads.list',
+    item: (id: string) => `uploads.item.${id}`,
+    itemLink: (id: string) => `uploads.item.${id}.link`,
+    itemDelete: (id: string) => `uploads.item.${id}.delete`,
+  },
   home: {
     page: 'home.page',
     chat: {

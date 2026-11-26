@@ -37,3 +37,64 @@ describe('loadServerConfig — AUTH_DRIVER', () => {
     );
   });
 });
+
+describe('loadServerConfig — STORAGE_DRIVER', () => {
+  const base = { DB_DRIVER: 'memory' };
+
+  test('defaults to a local directory, ./storage, when running locally', () => {
+    const config = loadServerConfig(base);
+    expect(config.storageDriver).toBe('local');
+    expect(config.storageLocalDir).toBe('storage');
+  });
+
+  test('outside local the directory must be named: the default would sit in the build output', () => {
+    expect(() => loadServerConfig({ ...base, APP_ENV: 'production' })).toThrow(
+      'STORAGE_LOCAL_DIR is required',
+    );
+    const config = loadServerConfig({
+      ...base,
+      APP_ENV: 'production',
+      STORAGE_LOCAL_DIR: '/var/lib/app/uploads',
+    });
+    expect(config.storageLocalDir).toBe('/var/lib/app/uploads');
+  });
+
+  test('s3 names every setting it is missing; region and endpoint are optional', () => {
+    expect(() => loadServerConfig({ ...base, STORAGE_DRIVER: 's3', S3_BUCKET: 'b' })).toThrow(
+      'S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY required when STORAGE_DRIVER=s3',
+    );
+    const config = loadServerConfig({
+      ...base,
+      STORAGE_DRIVER: 's3',
+      S3_BUCKET: 'b',
+      S3_ACCESS_KEY_ID: 'k',
+      S3_SECRET_ACCESS_KEY: 's',
+      S3_REGION: '',
+      S3_ENDPOINT: 'http://home.example.com:9000',
+    });
+    expect(config.s3).toEqual({
+      bucket: 'b',
+      accessKeyId: 'k',
+      secretAccessKey: 's',
+      endpoint: 'http://home.example.com:9000',
+    });
+  });
+
+  test('gdrive names every setting it is missing', () => {
+    expect(() =>
+      loadServerConfig({ ...base, STORAGE_DRIVER: 'gdrive', GDRIVE_CLIENT_ID: 'c' }),
+    ).toThrow(
+      'GDRIVE_CLIENT_SECRET, GDRIVE_REFRESH_TOKEN, GDRIVE_FOLDER_ID required when STORAGE_DRIVER=gdrive',
+    );
+  });
+
+  test('the upload limit defaults to 10 MiB and cannot pass what the server can read', () => {
+    expect(loadServerConfig(base).uploadMaxBytes).toBe(10 * 1024 * 1024);
+    expect(() => loadServerConfig({ ...base, UPLOAD_MAX_BYTES: String(1024 ** 3) })).toThrow();
+  });
+
+  test('CDN_BASE_URL must be a URL when set, and blank means unset', () => {
+    expect(loadServerConfig({ ...base, CDN_BASE_URL: '' }).cdnBaseUrl).toBeUndefined();
+    expect(() => loadServerConfig({ ...base, CDN_BASE_URL: 'cdn.example.com' })).toThrow();
+  });
+});

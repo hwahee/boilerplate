@@ -23,6 +23,7 @@ import type {
   ChatMessage,
   SendChatMessageInput,
 } from '@shared/domain/chat';
+import { UPLOAD_FIELD, type StoredFile } from '@shared/domain/file';
 import type { Sitemap } from '@shared/domain/sitemap';
 import type { CreateTodoInput, Todo, TodoListQuery, UpdateTodoInput } from '@shared/domain/todo';
 import type { User } from '@shared/domain/user';
@@ -176,6 +177,42 @@ export const chatApi = {
       method: 'POST',
       body: input,
     });
+  },
+};
+
+/**
+ * Uploaded files. A file never changes after upload, and `StoredFile.url` is
+ * where to load it — on the CDN when the server has one configured — so it
+ * goes straight into `<img src>` or a link.
+ */
+export const filesApi = {
+  /**
+   * `POST /api/files`
+   *
+   * Uploads one file. Members only.
+   * - Body:   multipart/form-data with the file in the `file` field.
+   * - Errors: 400 `VALIDATION_ERROR` (no file, or empty), 401 `UNAUTHORIZED`
+   *           for a guest, 413 `PAYLOAD_TOO_LARGE` with `details.maxBytes`.
+   * - Returns 201 with the `StoredFile`. Its `contentType` is what the server
+   *   found in the bytes: a known image format, or `application/octet-stream`
+   *   (served as a download).
+   */
+  upload(file: File): Promise<StoredFile> {
+    const form = new FormData();
+    form.set(UPLOAD_FIELD, file);
+    return apiFetch('/api/files', { method: 'POST', body: form });
+  },
+
+  /**
+   * `DELETE /api/files/:id`
+   *
+   * Deletes a file one uploaded. A CDN may keep serving its copy for a while.
+   * - Errors: 401 `UNAUTHORIZED`, 403 `FORBIDDEN` for another member's file,
+   *           404 `NOT_FOUND`.
+   * - Returns 204 (void).
+   */
+  remove(id: string): Promise<void> {
+    return apiFetch(`/api/files/${id}`, { method: 'DELETE' });
   },
 };
 

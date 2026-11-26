@@ -19,6 +19,8 @@ import type {
   ChatMessageRepository,
   ChatRoomRepository,
   DbSession,
+  FileRecord,
+  FileRepository,
   TodoRepository,
   UnitOfWork,
 } from './types';
@@ -32,6 +34,7 @@ export class MemoryStore {
   chatRooms = new Map<string, { room: ChatRoom; lastSeq: number }>();
   /** Per room, in `seq` order. */
   chatMessages = new Map<string, ChatMessage[]>();
+  files = new Map<string, FileRecord>();
 
   /**
    * Deep copy of every table. Deliberately not a per-table list: a table added
@@ -170,6 +173,22 @@ export function createMemoryChatMessageRepository(store: MemoryStore): ChatMessa
         store.chatMessages.set(roomId, kept);
       }
       return Promise.resolve(deleted);
+    },
+  };
+}
+
+export function createMemoryFileRepository(store: MemoryStore): FileRepository {
+  return {
+    async insert(file) {
+      store.files.set(file.id, structuredClone(file));
+      return Promise.resolve();
+    },
+    async findById(id) {
+      const file = store.files.get(id);
+      return Promise.resolve(file ? structuredClone(file) : null);
+    },
+    async deleteById(id) {
+      return Promise.resolve(store.files.delete(id));
     },
   };
 }

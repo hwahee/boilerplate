@@ -21,6 +21,7 @@ src/
 │   ├── pubsub/      # 인스턴스 간 통신 (memory/redis 드라이버)
 │   ├── presence/    # 누가 어디에 접속해 있나 (memory/redis 드라이버, 채팅 접속자 목록)
 │   ├── realtime/    # 채팅 WebSocket 게이트웨이 (/ws/chat)
+│   ├── storage/     # 업로드한 파일의 바이트 저장소 (local/s3/gdrive 드라이버)
 │   └── container.ts # 컴포지션 루트 — 프로세스당 싱글톤 관리
 └── client/          # React SPA
     ├── api/         # ★ 모든 API가 endpoints.ts 한 곳에 문서화되어 모임
@@ -30,7 +31,7 @@ src/
     ├── styles/      # 디자인 토큰 (라이트/다크 × 스킨 4종)
     ├── theme/ i18n/ # 테마·로케일 컨텍스트
     ├── testing/     # data-testid 레지스트리 (docs/ui-automation.md 참고)
-    └── pages/       # Home(Todos + 채팅), Design System, 로그인 실패, NotFound
+    └── pages/       # Home(Todos + 업로드 + 채팅), Design System, 로그인 실패, NotFound
 
 public/             # 런타임에 디스크에서 읽는 정적 데이터 (번들되지 않음)
 └── sitemap.json    # 서비스 디렉터리 — 푸터의 "Other Services" 컬럼 소스
@@ -69,16 +70,17 @@ DB 없이 바로 실행하려면 `.env`에서 `DB_DRIVER=memory`로 바꾸면 �
 다른 프로젝트의 Postgres와 함께 띄우려면 `.env`의 `POSTGRES_PORT`와 `DATABASE_URL`의 포트를 같이 바꿉니다
 (다른 Postgres가 이미 그 포트를 쓰고 있으면 `db:setup`이 비밀번호 오류로 바로 멈춥니다).
 
-| 명령                      | 설명                                                                    |
-| ------------------------- | ----------------------------------------------------------------------- |
-| `bun run dev`             | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                            |
-| `bun test`                | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행   |
-| `bun run check`           | prettier + eslint + tsc + knip + test 전체 게이트 (CI와 동일)           |
-| `bun run build`           | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)      |
-| `bun run start`           | 빌드 산출물 실행                                                        |
-| `bun run db:*`            | `db:up` / `db:migrate` / `db:seed` / `db:setup`                         |
-| `bun run chat:load`       | 채팅 부하 테스트: 한 방에 N명 입장 + 메시지 전송 (`[인원] [메시지 수]`) |
-| `bun run compiler:report` | React Compiler가 컴파일하지 못한 컴포넌트·훅 목록 (`--all`: 전부)       |
+| 명령                           | 설명                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| `bun run dev`                  | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                            |
+| `bun test`                     | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행   |
+| `bun run check`                | prettier + eslint + tsc + knip + test 전체 게이트 (CI와 동일)           |
+| `bun run build`                | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)      |
+| `bun run start`                | 빌드 산출물 실행                                                        |
+| `bun run db:*`                 | `db:up` / `db:migrate` / `db:seed` / `db:setup`                         |
+| `bun run chat:load`            | 채팅 부하 테스트: 한 방에 N명 입장 + 메시지 전송 (`[인원] [메시지 수]`) |
+| `bun run storage:gdrive-setup` | 구글 드라이브 저장소 1회 설정: 로그인 → 폴더 생성 → 환경 변수 출력      |
+| `bun run compiler:report`      | React Compiler가 컴파일하지 못한 컴포넌트·훅 목록 (`--all`: 전부)       |
 
 ## 아키텍처 결정
 
@@ -245,6 +247,56 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
   실제 앱과 WebSocket으로 한 방에 인원을 넣고 메시지를 보내 입장 완료 시간과 전송량을 잽니다.
 - **아직 없는 것**: 비공개(참여자만 읽는) 방과 운영자 역할, 입력 중·읽음 표시, 메시지 수정·삭제,
   도배 제한, 지난 채팅 더 불러오기.
+
+### 파일 업로드와 CDN
+
+파일은 한 번 올리면 바뀌지 않습니다(바꾸려면 새로 올립니다). 그래서 파일 주소는 브라우저와 CDN이 영원히
+캐시할 수 있고, 저장소가 무엇이든 주소와 코드는 같습니다. 이미지가 필요한 기능(커뮤니티 글 등)은 파일을
+올리고 돌아온 `url`을 자기 데이터에 넣어 두면 됩니다.
+
+- **흐름**: `POST /api/files`(multipart, `file` 필드) → `StoredFile { id, url, name, contentType, size, createdAt }`.
+  `url`을 `<img src>`나 링크에 그대로 씁니다. 바이트는 `GET /files/{id}.{확장자}`가 내주고, 삭제는
+  `DELETE /api/files/:id`입니다. 클라이언트는 `filesApi.upload(file)` / `useUploadFile()`을 쓰며, 예시는 홈
+  페이지의 업로드 상자(`src/client/pages/upload-demo.tsx`)입니다.
+- **저장소 드라이버** (`STORAGE_DRIVER`, `src/server/storage`): 바이트만 저장소에 두고, 이름·종류·크기·올린
+  사람은 DB의 `files` 테이블에 둡니다. 드라이버를 바꿔도 이미 올린 파일은 옮겨지지 않습니다.
+
+  | 드라이버 | 저장 위치                                          | 필요한 설정                                                                            |
+  | -------- | -------------------------------------------------- | -------------------------------------------------------------------------------------- |
+  | `local`  | 서버가 도는 컴퓨터의 디렉터리 (기본값)             | `STORAGE_LOCAL_DIR` (로컬 개발은 `./storage` 기본)                                     |
+  | `s3`     | S3 버킷, 또는 S3 호환 저장소 (Bun 내장 클라이언트) | `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (+ `S3_REGION`, `S3_ENDPOINT`) |
+  | `gdrive` | 구글 드라이브의 폴더 (Drive v3 REST)               | `GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`, `GDRIVE_REFRESH_TOKEN`, `GDRIVE_FOLDER_ID` |
+  | `memory` | 프로세스 메모리 (테스트용)                         | 없음                                                                                   |
+  - **집에 있는 컴퓨터**: 서버를 그 컴퓨터에서 돌리면 `local`입니다. 서버는 다른 곳에 있고 집 컴퓨터를
+    저장소로만 쓰려면 집 컴퓨터에 S3 호환 서버(MinIO 등)를 띄우고 `s3` + `S3_ENDPOINT`로 붙습니다.
+  - **local**: `APP_ENV=local`이 아니면 `STORAGE_LOCAL_DIR`이 필수입니다(기본 위치는 빌드 때 지워지는
+    `dist/` 안이 되기 때문). 인스턴스가 여럿이면 모두가 같은 디렉터리(공유 볼륨)를 봐야 합니다.
+    `docker compose --profile app`은 `uploads` 볼륨을 씁니다.
+  - **s3**: 버킷은 비공개로 둡니다. 브라우저는 버킷이 아니라 이 서버의 `/files`(또는 그 앞의 CDN)에서 받습니다.
+  - **gdrive**: Google Cloud Console에서 Drive API를 켜고 "데스크톱 앱" OAuth 클라이언트를 만들어 id·secret을
+    `.env`에 넣은 뒤 `bun run storage:gdrive-setup [폴더 이름]`을 한 번 실행합니다. 브라우저로 구글 계정에
+    로그인하면 폴더를 만들고 `GDRIVE_REFRESH_TOKEN`·`GDRIVE_FOLDER_ID`를 출력합니다. 권한은 `drive.file`
+    (서버가 올린 파일만 접근)입니다. OAuth 동의 화면이 "테스트" 상태면 리프레시 토큰이 7일 뒤 만료되므로
+    "프로덕션"으로 게시해 둡니다. 드라이브는 느리고 호출 한도가 있어 CDN을 앞에 두는 것을 권합니다.
+    이 토큰은 서버와 구글 사이의 것으로, 회원 로그인과는 무관합니다.
+
+- **CDN** (`CDN_BASE_URL`): `/files/*`는 CDN이 가져가는 원본입니다. 모든 응답에
+  `Cache-Control: public, max-age=31536000, immutable`과 `ETag`(SHA-256)가 붙고, 재검증에는 304로 답합니다.
+  CDN(Cloudflare, CloudFront 등)을 이 서버를 원본으로 하는 pull 방식으로 설정하고 그 주소를
+  `CDN_BASE_URL=https://cdn.example.com`으로 주면, API가 돌려주는 `url`이 CDN 주소가 됩니다
+  (`https://cdn.example.com/files/{id}.png`). 설정하지 않으면 `url`은 이 서버의 경로(`/files/…`)입니다.
+  주소 끝의 확장자는 확장자로 캐시 여부를 정하는 CDN을 위한 것이고 서버는 무시합니다. CDN은 `/files/*`만
+  캐시하게 두면 됩니다.
+- **누가 올리나**: 업로드는 접속을 끊은 뒤에도 남으므로 회원만 올리고 지웁니다(`requireMember`). 지우는 것은
+  올린 회원만 가능합니다(다른 회원은 403 `FORBIDDEN`). 파일을 받는 것은 주소를 아는 누구에게나 열려
+  있습니다 — 주소는 추측할 수 없는 UUID지만 비공개 파일을 위한 장치는 아닙니다.
+- **무엇을 올릴 수 있나**: 크기 제한은 `UPLOAD_MAX_BYTES`(기본 10MiB, 최대 100MiB)이고 넘으면 413
+  `PAYLOAD_TOO_LARGE`(`details.maxBytes`)입니다. 종류는 올린 쪽의 주장(이름·Content-Type)이 아니라 바이트
+  앞부분으로 판별합니다: PNG·JPEG·GIF·WebP·AVIF만 이미지로 화면에 표시되고, 그 밖의 모든 파일(SVG·HTML
+  포함)은 `application/octet-stream` 다운로드로만 내려갑니다(`nosniff` + `Content-Security-Policy: sandbox`).
+- **아직 없는 것**: 내가 올린 파일 목록 API, 어디에도 쓰이지 않는 파일 정리, 이미지 리사이즈·썸네일,
+  Range 요청(동영상 탐색), 브라우저가 저장소로 직접 올리는 방식(presigned URL), 비공개 파일, 삭제 시 CDN
+  캐시 무효화(지운 파일은 CDN 사본이 만료될 때까지 남을 수 있음), 드라이버 간 파일 이전, 회원별 용량 제한.
 
 ### i18n
 

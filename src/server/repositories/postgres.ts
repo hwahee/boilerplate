@@ -15,6 +15,8 @@ import type {
   ChatMessageRepository,
   ChatRoomRepository,
   DbSession,
+  FileRecord,
+  FileRepository,
   TodoRepository,
 } from './types';
 
@@ -276,6 +278,59 @@ export function createPostgresChatMessageRepository(db: PostgresDb): ChatMessage
         SELECT count(*)::int AS deleted FROM deleted
       `;
       return rows[0]?.deleted ?? 0;
+    },
+  };
+}
+
+interface FileRow {
+  id: string;
+  owner_id: string | null;
+  name: string;
+  content_type: string;
+  size_bytes: string | number;
+  sha256: string;
+  storage_ref: string;
+  created_at: Date;
+}
+
+function rowToFile(row: FileRow): FileRecord {
+  return {
+    id: row.id,
+    ownerId: row.owner_id,
+    name: row.name,
+    contentType: row.content_type,
+    size: Number(row.size_bytes),
+    sha256: row.sha256,
+    storageRef: row.storage_ref,
+    createdAt: toUtcIso(row.created_at),
+  };
+}
+
+export function createPostgresFileRepository(db: PostgresDb): FileRepository {
+  return {
+    async insert(file, session) {
+      const sql = sessionSql(db, session);
+      await sql`
+        INSERT INTO files (id, owner_id, name, content_type, size_bytes, sha256, storage_ref, created_at)
+        VALUES (${file.id}, ${file.ownerId}, ${file.name}, ${file.contentType}, ${file.size},
+                ${file.sha256}, ${file.storageRef}, ${file.createdAt})
+      `;
+    },
+
+    async findById(id, session) {
+      const sql = sessionSql(db, session);
+      const rows = await sql<FileRow[]>`
+        SELECT id, owner_id, name, content_type, size_bytes, sha256, storage_ref, created_at
+          FROM files WHERE id = ${id}
+      `;
+      const row = rows[0];
+      return row ? rowToFile(row) : null;
+    },
+
+    async deleteById(id, session) {
+      const sql = sessionSql(db, session);
+      const rows = await sql<{ id: string }[]>`DELETE FROM files WHERE id = ${id} RETURNING id`;
+      return rows.length > 0;
     },
   };
 }
