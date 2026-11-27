@@ -3,7 +3,7 @@
 #   docker compose up -d db          # Postgres only (bun run db:up)
 #   docker compose --profile redis up -d   # + Redis (for PUBSUB_DRIVER=redis)
 #   docker compose --profile app up --build  # containerized build of the app itself
-#   bun run sftp:setup               # SFTP-only server for STORAGE_DRIVER=sftp (keys + .env too)
+#   bun run sftp:setup [--port 2223] # SFTP-only server for STORAGE_DRIVER=sftp (prints the .env lines)
 #
 # Credentials come from .env (see .env.example) — never hardcode secrets here.
 services:
@@ -30,7 +30,8 @@ services:
       - '6379:6379'
 
   # SFTP-only server for STORAGE_DRIVER=sftp. Set up and started by
-  # `bun run sftp:setup`, which also makes the keys in ./.sftp and fills .env.
+  # `bun run sftp:setup [--port <n>]`, which also makes the keys in ./.sftp
+  # and prints the lines to paste into .env.
   sftp:
     profiles: [sftp]
     build: ./docker/sftp
