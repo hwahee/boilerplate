@@ -88,6 +88,32 @@ describe('loadServerConfig — STORAGE_DRIVER', () => {
     );
   });
 
+  test('sftp names every setting it is missing; the port defaults to 22', () => {
+    expect(() => loadServerConfig({ ...base, STORAGE_DRIVER: 'sftp', SFTP_HOST: 'h' })).toThrow(
+      'SFTP_USERNAME, SFTP_PRIVATE_KEY_PATH, SFTP_HOST_FINGERPRINT, SFTP_DIRECTORY required when STORAGE_DRIVER=sftp',
+    );
+    const sftp = {
+      ...base,
+      STORAGE_DRIVER: 'sftp',
+      SFTP_HOST: 'home.example.com',
+      SFTP_USERNAME: 'uploader',
+      SFTP_PRIVATE_KEY_PATH: '/etc/app/sftp_key',
+      SFTP_HOST_FINGERPRINT: `SHA256:${'a'.repeat(43)}`,
+      SFTP_DIRECTORY: '/srv/uploads',
+    };
+    expect(loadServerConfig(sftp).sftp).toEqual({
+      host: 'home.example.com',
+      port: 22,
+      username: 'uploader',
+      privateKeyPath: '/etc/app/sftp_key',
+      hostFingerprint: `SHA256:${'a'.repeat(43)}`,
+      directory: '/srv/uploads',
+    });
+    // The fingerprint is how the server knows it talks to the right machine: no other form passes.
+    expect(() => loadServerConfig({ ...sftp, SFTP_HOST_FINGERPRINT: 'aa:bb:cc' })).toThrow();
+    expect(() => loadServerConfig({ ...sftp, SFTP_DIRECTORY: 'uploads' })).toThrow();
+  });
+
   test('the upload limit defaults to 10 MiB and cannot pass what the server can read', () => {
     expect(loadServerConfig(base).uploadMaxBytes).toBe(10 * 1024 * 1024);
     expect(() => loadServerConfig({ ...base, UPLOAD_MAX_BYTES: String(1024 ** 3) })).toThrow();

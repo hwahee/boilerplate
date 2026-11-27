@@ -9,6 +9,7 @@
  *   - `s3`     — an S3 bucket, or anything that speaks S3 (MinIO on a home
  *                computer, Cloudflare R2, …), via Bun's built-in client.
  *   - `gdrive` — a folder in Google Drive.
+ *   - `sftp`   — a directory on another machine, over SSH.
  *   - `memory` — the process's memory; for tests.
  *
  * A store holds bytes and nothing else: the name, type, size and owner of a

@@ -261,17 +261,25 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
 - **저장소 드라이버** (`STORAGE_DRIVER`, `src/server/storage`): 바이트만 저장소에 두고, 이름·종류·크기·올린
   사람은 DB의 `files` 테이블에 둡니다. 드라이버를 바꿔도 이미 올린 파일은 옮겨지지 않습니다.
 
-  | 드라이버 | 저장 위치                                          | 필요한 설정                                                                            |
-  | -------- | -------------------------------------------------- | -------------------------------------------------------------------------------------- |
-  | `local`  | 서버가 도는 컴퓨터의 디렉터리 (기본값)             | `STORAGE_LOCAL_DIR` (로컬 개발은 `./storage` 기본)                                     |
-  | `s3`     | S3 버킷, 또는 S3 호환 저장소 (Bun 내장 클라이언트) | `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (+ `S3_REGION`, `S3_ENDPOINT`) |
-  | `gdrive` | 구글 드라이브의 폴더 (Drive v3 REST)               | `GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`, `GDRIVE_REFRESH_TOKEN`, `GDRIVE_FOLDER_ID` |
-  | `memory` | 프로세스 메모리 (테스트용)                         | 없음                                                                                   |
+  | 드라이버 | 저장 위치                                          | 필요한 설정                                                                                                                         |
+  | -------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+  | `local`  | 서버가 도는 컴퓨터의 디렉터리 (기본값)             | `STORAGE_LOCAL_DIR` (로컬 개발은 `./storage` 기본)                                                                                  |
+  | `s3`     | S3 버킷, 또는 S3 호환 저장소 (Bun 내장 클라이언트) | `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` (+ `S3_REGION`, `S3_ENDPOINT`)                                              |
+  | `gdrive` | 구글 드라이브의 폴더 (Drive v3 REST)               | `GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`, `GDRIVE_REFRESH_TOKEN`, `GDRIVE_FOLDER_ID`                                              |
+  | `sftp`   | 다른 컴퓨터의 디렉터리, SSH(SFTP)로 접속           | `SFTP_HOST`, `SFTP_USERNAME`, `SFTP_PRIVATE_KEY_PATH`, `SFTP_HOST_FINGERPRINT`, `SFTP_DIRECTORY` (+ `SFTP_PORT`, `SFTP_PASSPHRASE`) |
+  | `memory` | 프로세스 메모리 (테스트용)                         | 없음                                                                                                                                |
   - **집에 있는 컴퓨터**: 서버를 그 컴퓨터에서 돌리면 `local`입니다. 서버는 다른 곳에 있고 집 컴퓨터를
-    저장소로만 쓰려면 집 컴퓨터에 S3 호환 서버(MinIO 등)를 띄우고 `s3` + `S3_ENDPOINT`로 붙습니다.
+    저장소로만 쓰려면, SSH로 접속할 수 있으면 `sftp`, 집 컴퓨터에 S3 호환 서버(MinIO 등)를 띄울 수 있으면
+    `s3` + `S3_ENDPOINT`로 붙습니다.
   - **local**: `APP_ENV=local`이 아니면 `STORAGE_LOCAL_DIR`이 필수입니다(기본 위치는 빌드 때 지워지는
     `dist/` 안이 되기 때문). 인스턴스가 여럿이면 모두가 같은 디렉터리(공유 볼륨)를 봐야 합니다.
     `docker compose --profile app`은 `uploads` 볼륨을 씁니다.
+  - **sftp**: 저장할 컴퓨터에 SSH로 접속할 계정과 키를 만듭니다. 서버는 키로만 로그인하고(비밀번호는 받지
+    않음), 연결할 때 그 컴퓨터의 호스트 키를 `SFTP_HOST_FINGERPRINT`와 대조해 다르면 아무것도 보내지 않습니다.
+    지문은 그 컴퓨터에서 `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`가 출력하는 `SHA256:…`입니다.
+    파일은 `local`과 같은 모양(`{SFTP_DIRECTORY}/{앞 두 글자}/{키}`, 파일 `600`·디렉터리 `700`)으로 놓입니다.
+    SSH 연결은 처음 쓸 때 하나 열어 함께 쓰고, 끊기면 다음 요청이 새로 엽니다. 조회마다 SSH 왕복이 더해지므로
+    자주 읽히는 파일은 CDN을 앞에 두는 것을 권합니다. 클라이언트는 `ssh2` 패키지(순수 JS, Windows 포함)입니다.
   - **s3**: 버킷은 비공개로 둡니다. 브라우저는 버킷이 아니라 이 서버의 `/files`(또는 그 앞의 CDN)에서 받습니다.
   - **gdrive**: Google Cloud Console에서 Drive API를 켜고 "데스크톱 앱" OAuth 클라이언트를 만들어 id·secret을
     `.env`에 넣은 뒤 `bun run storage:gdrive-setup [폴더 이름]`을 한 번 실행합니다. 브라우저로 구글 계정에
