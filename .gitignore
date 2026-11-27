@@ -21,3 +21,6 @@ coverage/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Keys made by `bun run sftp:setup` (private keys — never commit)
+/.sftp/

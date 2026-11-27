@@ -70,17 +70,18 @@ DB 없이 바로 실행하려면 `.env`에서 `DB_DRIVER=memory`로 바꾸면 �
 다른 프로젝트의 Postgres와 함께 띄우려면 `.env`의 `POSTGRES_PORT`와 `DATABASE_URL`의 포트를 같이 바꿉니다
 (다른 Postgres가 이미 그 포트를 쓰고 있으면 `db:setup`이 비밀번호 오류로 바로 멈춥니다).
 
-| 명령                           | 설명                                                                    |
-| ------------------------------ | ----------------------------------------------------------------------- |
-| `bun run dev`                  | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                            |
-| `bun test`                     | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행   |
-| `bun run check`                | prettier + eslint + tsc + knip + test 전체 게이트 (CI와 동일)           |
-| `bun run build`                | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)      |
-| `bun run start`                | 빌드 산출물 실행                                                        |
-| `bun run db:*`                 | `db:up` / `db:migrate` / `db:seed` / `db:setup`                         |
-| `bun run chat:load`            | 채팅 부하 테스트: 한 방에 N명 입장 + 메시지 전송 (`[인원] [메시지 수]`) |
-| `bun run storage:gdrive-setup` | 구글 드라이브 저장소 1회 설정: 로그인 → 폴더 생성 → 환경 변수 출력      |
-| `bun run compiler:report`      | React Compiler가 컴파일하지 못한 컴포넌트·훅 목록 (`--all`: 전부)       |
+| 명령                           | 설명                                                                                            |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `bun run dev`                  | 개발 모드. 서버 자동 재시작 + 클라이언트 HMR                                                    |
+| `bun test`                     | 단위 + API 통합 테스트. 외부 환경 불필요 (in-memory DB), 한 번에 실행                           |
+| `bun run check`                | prettier + eslint + tsc + knip + test 전체 게이트 (CI와 동일)                                   |
+| `bun run build`                | 프로덕션 빌드 → `dist/` (서버가 클라이언트를 포함하는 단일 산출물)                              |
+| `bun run start`                | 빌드 산출물 실행                                                                                |
+| `bun run db:*`                 | `db:up` / `db:migrate` / `db:seed` / `db:setup`                                                 |
+| `bun run chat:load`            | 채팅 부하 테스트: 한 방에 N명 입장 + 메시지 전송 (`[인원] [메시지 수]`)                         |
+| `bun run sftp:setup`           | SFTP 저장소 한 번에 준비: 키 생성 → SFTP 전용 도커 기동 → 동작 확인 → `.env`에 붙여넣을 줄 출력 |
+| `bun run storage:gdrive-setup` | 구글 드라이브 저장소 1회 설정: 로그인 → 폴더 생성 → 환경 변수 출력                              |
+| `bun run compiler:report`      | React Compiler가 컴파일하지 못한 컴포넌트·훅 목록 (`--all`: 전부)                               |
 
 ## 아키텍처 결정
 
@@ -280,6 +281,17 @@ SIGTERM/SIGINT 수신 시: ① readiness가 즉시 503으로 바뀌어 LB가 트
     파일은 `local`과 같은 모양(`{SFTP_DIRECTORY}/{앞 두 글자}/{키}`, 파일 `600`·디렉터리 `700`)으로 놓입니다.
     SSH 연결은 처음 쓸 때 하나 열어 함께 쓰고, 끊기면 다음 요청이 새로 엽니다. 조회마다 SSH 왕복이 더해지므로
     자주 읽히는 파일은 CDN을 앞에 두는 것을 권합니다. 클라이언트는 `ssh2` 패키지(순수 JS, Windows 포함)입니다.
+  - **sftp를 도커로 바로 쓰기**: `bun run sftp:setup` 한 번이면 됩니다.
+    1. `.sftp/`(gitignore됨)에 서버 호스트 키와 접속용 키를 만듭니다. 이미 있으면 그대로 써서 지문이 바뀌지 않습니다.
+    2. SFTP 전용 컨테이너(`docker/sftp`, compose의 `sftp` 프로필)를 `SFTP_PORT`(기본 2222)로 띄웁니다. 계정
+       `uploader` 하나만 키로 SFTP를 쓸 수 있고 셸·포워딩은 막혀 있습니다. 파일은 `sftp-data` 볼륨에 남습니다.
+    3. 서버와 같은 드라이버로 시험 파일을 올리고 읽고 지워 봅니다.
+    4. `.env`에 붙여넣을 `STORAGE_DRIVER=sftp`와 `SFTP_*` 줄을 출력합니다(`.sftp/sftp.env`에도 저장). `.env`는
+       직접 고치지 않으니, 출력된 줄을 붙여넣고 서버를 다시 띄웁니다.
+
+    다시 실행해도 안전합니다(키·파일 유지, 같은 줄 출력). 내리려면 `docker compose --profile sftp down`, 올린
+    파일까지 지우려면 `-v`를 붙입니다.
+
   - **s3**: 버킷은 비공개로 둡니다. 브라우저는 버킷이 아니라 이 서버의 `/files`(또는 그 앞의 CDN)에서 받습니다.
   - **gdrive**: Google Cloud Console에서 Drive API를 켜고 "데스크톱 앱" OAuth 클라이언트를 만들어 id·secret을
     `.env`에 넣은 뒤 `bun run storage:gdrive-setup [폴더 이름]`을 한 번 실행합니다. 브라우저로 구글 계정에
