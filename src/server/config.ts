@@ -50,10 +50,10 @@ const configValidator = toValidator(
     ),
     /**
      * Where uploaded bytes live (src/server/storage): a directory on this
-     * machine, an S3(-compatible) bucket, a Google Drive folder, or — for
-     * tests — memory.
+     * machine, an S3(-compatible) bucket, a Google Drive folder, a directory
+     * on another machine over SSH (SFTP), or — for tests — memory.
      */
-    storageDriver: s._default(s.enum(['local', 's3', 'gdrive', 'memory']), 'local'),
+    storageDriver: s._default(s.enum(['local', 's3', 'gdrive', 'sftp', 'memory']), 'local'),
     /** STORAGE_DRIVER=local: the directory. Defaults to `./storage` only when APP_ENV=local. */
     storageLocalDir: s.optional(s.string().check(s.minLength(1))),
     /** Present exactly when STORAGE_DRIVER=s3. */
@@ -75,6 +75,21 @@ const configValidator = toValidator(
         /** Of the Google account that owns the folder (scripts/gdrive-setup.ts). */
         refreshToken: s.string().check(s.minLength(1)),
         folderId: s.string().check(s.minLength(1)),
+      }),
+    ),
+    /** Present exactly when STORAGE_DRIVER=sftp: a directory on another machine, over SSH. */
+    sftp: s.optional(
+      s.object({
+        host: s.string().check(s.minLength(1)),
+        port: s._default(s.int().check(s.gte(1), s.lte(65535)), 22),
+        username: s.string().check(s.minLength(1)),
+        /** A private key file (OpenSSH format) the remote account accepts. Never a password. */
+        privateKeyPath: s.string().check(s.minLength(1)),
+        passphrase: s.optional(s.string().check(s.minLength(1))),
+        /** The remote host key, as `ssh-keygen -l` prints it: `SHA256:…`. */
+        hostFingerprint: s.string().check(s.regex(/^SHA256:[A-Za-z0-9+/]{43}$/)),
+        /** Absolute path of the directory uploads go to on the remote machine. */
+        directory: s.string().check(s.regex(/^\//)),
       }),
     ),
     /** Largest upload accepted, in bytes. */
@@ -112,6 +127,13 @@ const OIDC_ENV = [
 
 /** What each STORAGE_DRIVER needs besides itself. */
 const S3_ENV = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'] as const;
+const SFTP_ENV = [
+  'SFTP_HOST',
+  'SFTP_USERNAME',
+  'SFTP_PRIVATE_KEY_PATH',
+  'SFTP_HOST_FINGERPRINT',
+  'SFTP_DIRECTORY',
+] as const;
 const GDRIVE_ENV = [
   'GDRIVE_CLIENT_ID',
   'GDRIVE_CLIENT_SECRET',
@@ -138,6 +160,8 @@ export function loadServerConfig(env: Env = process.env): ServerConfig {
   if (s3) requireEnv(env, S3_ENV, 'STORAGE_DRIVER=s3');
   const gdrive = env.STORAGE_DRIVER === 'gdrive';
   if (gdrive) requireEnv(env, GDRIVE_ENV, 'STORAGE_DRIVER=gdrive');
+  const sftp = env.STORAGE_DRIVER === 'sftp';
+  if (sftp) requireEnv(env, SFTP_ENV, 'STORAGE_DRIVER=sftp');
 
   const config = configValidator.parse({
     appEnv: env.APP_ENV,
@@ -179,6 +203,17 @@ export function loadServerConfig(env: Env = process.env): ServerConfig {
           clientSecret: env.GDRIVE_CLIENT_SECRET,
           refreshToken: env.GDRIVE_REFRESH_TOKEN,
           folderId: env.GDRIVE_FOLDER_ID,
+        }
+      : undefined,
+    sftp: sftp
+      ? {
+          host: env.SFTP_HOST,
+          port: numberOrUndefined(env.SFTP_PORT),
+          username: env.SFTP_USERNAME,
+          privateKeyPath: env.SFTP_PRIVATE_KEY_PATH,
+          passphrase: valueOrUndefined(env.SFTP_PASSPHRASE),
+          hostFingerprint: env.SFTP_HOST_FINGERPRINT,
+          directory: env.SFTP_DIRECTORY,
         }
       : undefined,
     uploadMaxBytes: numberOrUndefined(env.UPLOAD_MAX_BYTES),

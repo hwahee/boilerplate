@@ -3,6 +3,7 @@ import { createGoogleDriveBlobStore } from './gdrive';
 import { createLocalBlobStore } from './local';
 import { createMemoryBlobStore } from './memory';
 import { createS3BlobStore } from './s3';
+import { createSftpBlobStore } from './sftp';
 import type { BlobStore } from './types';
 
 export type { BlobStore } from './types';
@@ -19,6 +20,9 @@ export function createBlobStore(config: ServerConfig): BlobStore {
     case 'gdrive':
       if (!config.gdrive) throw new Error('STORAGE_DRIVER=gdrive is not configured');
       return createGoogleDriveBlobStore(config.gdrive);
+    case 'sftp':
+      if (!config.sftp) throw new Error('STORAGE_DRIVER=sftp is not configured');
+      return createSftpBlobStore(config.sftp);
     case 'memory':
       return createMemoryBlobStore();
   }

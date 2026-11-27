@@ -26,6 +26,7 @@
     "db:setup": "bun run db:up && bun run scripts/wait-for-db.ts && bun run db:migrate && bun run db:seed",
     "chat:load": "bun run scripts/chat-load.ts",
     "storage:gdrive-setup": "bun run scripts/gdrive-setup.ts",
+    "sftp:setup": "bun run scripts/sftp-setup.ts",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -42,6 +43,7 @@
     "@types/bun": "^1.4.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/ssh2": "^1.15.6",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -58,6 +60,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0",
+    "ssh2": "^1.17.0",
     "zod": "^4.6.5"
   }
 }

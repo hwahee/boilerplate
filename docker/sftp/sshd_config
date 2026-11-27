@@ -1,0 +1,22 @@
+# SFTP only, key only, one account.
+Port 22
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+AuthenticationMethods publickey
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+AllowUsers uploader
+# Copied in by entrypoint.sh with strict permissions (a bind mount from
+# Windows or macOS cannot guarantee them).
+AuthorizedKeysFile /etc/ssh/authorized_keys/%u
+
+Subsystem sftp internal-sftp
+ForceCommand internal-sftp
+AllowTcpForwarding no
+AllowAgentForwarding no
+AllowStreamLocalForwarding no
+PermitTunnel no
+X11Forwarding no
+PermitTTY no

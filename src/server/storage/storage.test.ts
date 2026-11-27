@@ -12,6 +12,8 @@ import { createGoogleDriveBlobStore } from './gdrive';
 import { createLocalBlobStore } from './local';
 import { createMemoryBlobStore } from './memory';
 import { createS3BlobStore } from './s3';
+import { createSftpBlobStore } from './sftp';
+import { startTestSftpServer } from './sftp-test-server';
 import type { BlobBody, BlobStore } from './types';
 
 const cleanups: (() => Promise<unknown>)[] = [];
@@ -119,6 +121,23 @@ const newDriveStore = () =>
 const localDir = await mkdtemp(join(tmpdir(), 'blob-store-'));
 cleanups.push(() => rm(localDir, { recursive: true, force: true }));
 
+// ── SFTP: a real SSH server (ssh2's) serving a temporary directory ─────────────
+const sftpRoot = await mkdtemp(join(tmpdir(), 'sftp-root-'));
+cleanups.push(() => rm(sftpRoot, { recursive: true, force: true }));
+const sftpServer = await startTestSftpServer(sftpRoot);
+cleanups.push(() => sftpServer.stop());
+const sftpKeyFile = join(sftpRoot, '..', `${crypto.randomUUID()}.key`);
+await Bun.write(sftpKeyFile, sftpServer.clientPrivateKey);
+cleanups.push(() => rm(sftpKeyFile, { force: true }));
+const sftpConfig = {
+  host: '127.0.0.1',
+  port: sftpServer.port,
+  username: sftpServer.username,
+  privateKeyPath: sftpKeyFile,
+  hostFingerprint: sftpServer.hostFingerprint,
+  directory: '/uploads',
+};
+
 const drivers: Record<string, () => BlobStore> = {
   memory: createMemoryBlobStore,
   local: () => createLocalBlobStore(localDir),
@@ -131,6 +150,7 @@ const drivers: Record<string, () => BlobStore> = {
       endpoint: String(s3Server.url).replace(/\/$/, ''),
     }),
   gdrive: newDriveStore,
+  sftp: () => createSftpBlobStore(sftpConfig),
 };
 
 for (const [name, create] of Object.entries(drivers)) {
@@ -217,5 +237,48 @@ describe('google drive blob store', () => {
       { token: `${driveOrigin}/token`, api: `${driveOrigin}/api`, upload: `${driveOrigin}/upload` },
     );
     await expect(store.get('anything')).rejects.toThrow('Google Drive token failed: HTTP 400');
+  });
+});
+
+describe('sftp blob store', () => {
+  test('lays files out like the local driver, under the remote directory', async () => {
+    const key = newKey();
+    await createSftpBlobStore(sftpConfig).put(key, bytesOf('remote'), 'image/png');
+    const shard = join(sftpRoot, 'uploads', key.slice(0, 2));
+    expect(await readdir(shard)).toEqual([key]); // no .partial left behind
+  });
+
+  test('shares one connection, and opens a new one after a drop', async () => {
+    const store = createSftpBlobStore(sftpConfig);
+    const before = sftpServer.connections();
+    const ref = await store.put(newKey(), bytesOf('a'), 'image/png');
+    await store.get(ref);
+    expect(sftpServer.connections() - before).toBe(1);
+
+    sftpServer.dropConnections();
+    await Bun.sleep(50);
+    expect(await textOf(await store.get(ref))).toBe('a');
+    expect(sftpServer.connections() - before).toBe(2);
+  });
+
+  test('refuses a server whose host key is not the configured one', async () => {
+    const store = createSftpBlobStore({
+      ...sftpConfig,
+      hostFingerprint: `SHA256:${'A'.repeat(43)}`,
+    });
+    await expect(store.get(newKey())).rejects.toThrow('not SFTP_HOST_FINGERPRINT');
+  });
+
+  test('says which key file it could not read', async () => {
+    const store = createSftpBlobStore({ ...sftpConfig, privateKeyPath: '/nonexistent/key' });
+    await expect(store.get(newKey())).rejects.toThrow('cannot read SFTP_PRIVATE_KEY_PATH');
+  });
+
+  test('never leaves the remote directory', async () => {
+    const store = createSftpBlobStore(sftpConfig);
+    await expect(store.put('../escape', bytesOf('x'), 'image/png')).rejects.toThrow(
+      'not a storage key',
+    );
+    expect(await store.get('../../etc/passwd')).toBeNull();
   });
 });
